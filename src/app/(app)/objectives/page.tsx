@@ -12,7 +12,9 @@ import {
   Zap,
   LineChart,
   Check,
+  BookOpen, // Added for the button icon
 } from "lucide-react";
+import { useRouter } from "next/navigation"; // Added this
 
 const objectives = [
   {
@@ -95,6 +97,8 @@ const itemVariants = {
 } as const;
 
 export default function ObjectivesPage() {
+  const router = useRouter(); // Added
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FAF2E5] via-[#FAF2E5] to-[#DBDAAE]/20">
       {/* Hero Section */}
@@ -252,7 +256,7 @@ export default function ObjectivesPage() {
         </motion.div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA Section - NOW WORKING */}
       <motion.section
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -269,14 +273,20 @@ export default function ObjectivesPage() {
               Join thousands of readers who are building better habits with
               Lireon
             </p>
-            <button className="bg-white text-[#5D6939] px-8 py-4 rounded-full font-bold text-lg hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg">
+
+            {/* Fixed Button with Navigation */}
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="bg-white text-[#5D6939] px-8 py-4 rounded-full font-bold text-lg hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg inline-flex items-center gap-3"
+            >
+              <BookOpen className="w-6 h-6" />
               Start Reading Today
             </button>
           </div>
 
           {/* Decorative background */}
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute top-0 right-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2"></div>
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full translate-y-1/2 -translate-x-1/2"></div>
           </div>
         </div>

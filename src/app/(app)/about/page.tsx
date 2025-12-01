@@ -1,6 +1,7 @@
 // src/app/about/page.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -9,9 +10,8 @@ import {
   Calendar,
   Users,
   Heart,
-  Github,
-  Linkedin,
-  Mail,
+  Instagram,
+  Facebook,
   Sparkles,
 } from "lucide-react";
 
@@ -40,80 +40,73 @@ const features = [
 
 const team = [
   {
-    name: "Alex Rivera",
-    role: "Lead Developer & Designer",
-    bio: "Full-stack developer passionate about creating beautiful, functional reading experiences.",
-    image: "👨‍💻",
+    name: "Nathania M. Manibug",
+    role: "Team Leader",
+    bio: "Leading the team in developing Lireon, coordinating project goals and deliverables.",
+    image: "/Nathania-Manibug.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "alex@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Sam Chen",
-    role: "Product Manager",
-    bio: "Book enthusiast and product strategist focused on helping people read more.",
-    image: "👩‍💼",
+    name: "Jianne Alexa L. Pinapin",
+    role: "Graphic Designer",
+    bio: "Legal Management student specializing in visual design and graphics for the application.",
+    image: "/Jianne-Pinapin.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "sam@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Jordan Taylor",
-    role: "UX/UI Designer",
-    bio: "Designer crafting intuitive interfaces that make reading tracking effortless.",
-    image: "🎨",
+    name: "Angel U. Nicolas",
+    role: "Team Member",
+    bio: "Legal Management student contributing to the development of Lireon as a capstone project.",
+    image: "/Angel-Nicholas.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "jordan@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Morgan Blake",
-    role: "Backend Engineer",
-    bio: "Database architect ensuring your reading data is secure, fast, and always accessible.",
-    image: "⚙️",
+    name: "Geraldine D. Obenar",
+    role: "Team Member",
+    bio: "Legal Management student focused on creating intuitive and beautiful user interfaces for the project.",
+    image: "/Geraldine-Obenar.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "morgan@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Casey Martinez",
-    role: "Frontend Developer",
-    bio: "React specialist building smooth, responsive interfaces that readers love.",
-    image: "💻",
+    name: "John Paul A. Mauricio",
+    role: "Team Member",
+    bio: "Legal Management student handling database design and server-side logic for the application.",
+    image: "/John-Paul-Mauricio.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "casey@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Riley Park",
-    role: "Data Analyst",
-    bio: "Analytics expert helping users understand their reading patterns and progress.",
-    image: "📊",
+    name: "Nerissa D. Marcaida",
+    role: "Team Member",
+    bio: "Legal Management student ensuring the app works smoothly and bug-free for all users.",
+    image: "/Nerissa-Mercaida.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "riley@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
   {
-    name: "Quinn Anderson",
-    role: "Community Manager",
-    bio: "Building and nurturing our community of passionate readers worldwide.",
-    image: "🌟",
+    name: "Orland Karele I. Parallag",
+    role: "Team Member",
+    bio: "Legal Management student managing data structures and ensuring efficient data storage and retrieval.",
+    image: "/Orland-Parallag.png",
     links: {
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
-      email: "quinn@lireon.app",
+      facebook: "https://facebook.com",
+      instagram: "https://instagram.com",
     },
   },
 ];
@@ -141,6 +134,8 @@ const itemVariants = {
 } as const;
 
 export default function AboutPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FAF2E5] via-[#FAF2E5] to-[#DBDAAE]/20">
       {/* Hero Section */}
@@ -271,21 +266,27 @@ export default function AboutPage() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
         >
           {team.map((member, index) => (
             <motion.div
               key={index}
               variants={itemVariants}
               whileHover={{ scale: 1.03 }}
-              className="bg-white rounded-3xl p-8 shadow-xl border-2 border-[#DBDAAE] hover:border-[#5D6939] transition-all"
+              className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#DBDAAE] hover:border-[#5D6939] transition-all"
             >
-              <div className="text-center mb-4">
-                <div className="text-6xl mb-4">{member.image}</div>
-                <h3 className="text-2xl font-bold text-[#5D6939] mb-1">
+              <div className="text-center mb-3">
+                <div className="w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-3 border-[#DBDAAE]">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="text-lg font-bold text-[#5D6939] mb-1">
                   {member.name}
                 </h3>
-                <p className="text-sm font-medium text-[#5D6939]/70 mb-3">
+                <p className="text-sm font-medium text-[#5D6939]/70 mb-2">
                   {member.role}
                 </p>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -293,27 +294,20 @@ export default function AboutPage() {
                 </p>
               </div>
 
-              <div className="flex justify-center gap-3 pt-4 border-t-2 border-[#DBDAAE]">
+              <div className="flex justify-center gap-2 pt-3 border-t-2 border-[#DBDAAE]">
                 <a
-                  href={member.links.github}
+                  href={member.links.facebook}
                   className="p-2 rounded-lg bg-[#5D6939]/5 hover:bg-[#5D6939]/10 transition-colors"
-                  aria-label="GitHub"
+                  aria-label="Facebook"
                 >
-                  <Github className="w-5 h-5 text-[#5D6939]" />
+                  <Facebook className="w-4 h-4 text-[#5D6939]" />
                 </a>
                 <a
-                  href={member.links.linkedin}
+                  href={member.links.instagram}
                   className="p-2 rounded-lg bg-[#5D6939]/5 hover:bg-[#5D6939]/10 transition-colors"
-                  aria-label="LinkedIn"
+                  aria-label="Instagram"
                 >
-                  <Linkedin className="w-5 h-5 text-[#5D6939]" />
-                </a>
-                <a
-                  href={`mailto:${member.links.email}`}
-                  className="p-2 rounded-lg bg-[#5D6939]/5 hover:bg-[#5D6939]/10 transition-colors"
-                  aria-label="Email"
-                >
-                  <Mail className="w-5 h-5 text-[#5D6939]" />
+                  <Instagram className="w-4 h-4 text-[#5D6939]" />
                 </a>
               </div>
             </motion.div>
@@ -338,7 +332,11 @@ export default function AboutPage() {
               Join thousands of readers who are building better reading habits
               with Lireon
             </p>
-            <button className="bg-white text-[#5D6939] px-8 py-4 rounded-full font-bold text-lg hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="bg-white text-[#5D6939] px-8 py-4 rounded-full font-bold text-lg hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg inline-flex items-center gap-3"
+            >
+              <BookOpen className="w-6 h-6" />
               Start Your Reading Journey
             </button>
           </div>

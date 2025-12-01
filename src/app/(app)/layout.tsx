@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="ml-6 flex items-center gap-3 px-6 py-3 rounded-2xl bg-[#5D6939]/10 hover:bg-red-50 border-2 border-transparent hover:border-red-200 transition"
+              className="cursor-pointer ml-6 flex items-center gap-3 px-6 py-3 rounded-2xl bg-[#5D6939]/10 hover:bg-red-50 border-2 border-transparent hover:border-red-200 transition"
             >
               <LogOut className="w-5 h-5 text-[#5D6939] group-hover:text-red-600" />
               <span className="font-medium text-[#5D6939] group-hover:text-red-600 hidden sm:inline">
