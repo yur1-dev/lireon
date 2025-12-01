@@ -21,9 +21,9 @@ export interface ReadingSession {
   id: string;
   date: string | Date;
   duration?: number;
-  pagesRead?: number;
-  bookId?: string;
-  userId?: string;
+  pagesRead: number; // ✅ Fixed: Made required to match Prisma schema
+  bookId: string; // ✅ Fixed: Made required to match Prisma schema
+  userId: string; // ✅ Fixed: Made required to match Prisma schema
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }
