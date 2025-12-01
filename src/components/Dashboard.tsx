@@ -338,10 +338,10 @@ export default function Dashboard({
               setAppData(updated);
               propSetAppData?.(updated);
             }}
-            updateBook={(updatedBook: Book) => {
+            updateBook={(updatedBook: Partial<Book> & { id: string }) => {
               if (!appData) return;
               const updatedBooks = books.map((b) =>
-                b.id === updatedBook.id ? updatedBook : b
+                b.id === updatedBook.id ? { ...b, ...updatedBook } : b
               );
               const updated: AppData = { ...appData, books: updatedBooks };
               setAppData(updated);
