@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+// ✅ Updated to match the Book type from types/index.ts
 interface BookType {
   id: string;
   title: string;
@@ -23,6 +24,9 @@ interface BookType {
   totalPages: number;
   status: "to-read" | "reading" | "completed";
   rating?: number;
+  createdAt: string | Date; // ✅ Added
+  updatedAt: string | Date; // ✅ Added
+  userId?: string; // ✅ Added for consistency
 }
 
 interface BooksSectionProps {
@@ -55,9 +59,8 @@ export default function BooksSection({
   const [deletingBook, setDeletingBook] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [filterStatus, setFilterStatus] = useState<
-    "all" | "to-read" | "reading" | "completed"
-  >("all");
+  const [filterStatus, setFilterStatus] = useState;
+  "all" | "to-read" | "reading" | ("completed" > "all");
 
   // ADD BOOK
   const handleAddBook = async () => {
