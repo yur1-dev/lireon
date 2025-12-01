@@ -1,13 +1,13 @@
 // components/Dashboard.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Flame, BookOpen, FileText, Clock, TrendingUp } from "lucide-react";
 import TimerCard from "@/components/TimerCard";
 import CalendarCard from "@/components/CalendarCard";
 import ProgressGoalsTabs from "@/components/ProgressGoalsTabs";
-import BooksSection from "@/components/BooksSelection"; // ← Make sure this is correct
+import BooksSection from "@/components/BooksSelection";
 import TutorialModal from "@/components/TutorialModal";
 import type { AppData, Book, ReadingSession } from "@/types";
 
@@ -81,8 +81,8 @@ export default function Dashboard({
     }
   };
 
-  // Refresh reading sessions
-  const refreshSessions = async () => {
+  // Refresh sessions — now memoized so it doesn't break the listener
+  const refreshSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/reading-sessions", {
         credentials: "include",
@@ -91,52 +91,70 @@ export default function Dashboard({
 
       const sessions: ReadingSession[] = await res.json();
 
-      if (appData) {
-        const updated: AppData = { ...appData, sessions };
-        setAppData(updated);
+      setAppData((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, sessions };
         propSetAppData?.(updated);
-      }
+        return updated;
+      });
     } catch (error) {
       console.error("Failed to refresh sessions:", error);
     }
-  };
+  }, [propSetAppData]);
 
-  // NEW: Refresh books from server — fixes zombie books & crashes
-  const refreshBooks = async () => {
+  // Refresh books
+  const refreshBooks = useCallback(async () => {
     try {
       const res = await fetch("/api/books");
       if (!res.ok) throw new Error("Failed to fetch books");
 
       const freshBooks: Book[] = await res.json();
-
-      // Ensure it's always an array
       const safeBooks = Array.isArray(freshBooks) ? freshBooks : [];
 
-      if (appData) {
-        const updated: AppData = { ...appData, books: safeBooks };
-        setAppData(updated);
+      setAppData((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, books: safeBooks };
         propSetAppData?.(updated);
-      }
+        return updated;
+      });
     } catch (error) {
       console.error("Failed to refresh books:", error);
     }
-  };
+  }, [propSetAppData]);
 
-  // Safe extraction of books — no more .filter() crashes
-  const rawBooks = Array.isArray(appData?.books) ? appData.books : [];
-  const books: Book[] = rawBooks.filter(
-    (book): book is Book =>
-      !!book &&
-      typeof book === "object" &&
-      typeof book.id === "string" &&
-      !book.id.startsWith("temp-")
-  );
+  // CRITICAL FIX: This listener MUST NOT have appData in deps!
+  useEffect(() => {
+    const handleSessionCompleted = () => {
+      console.log("Session completed! Refreshing..."); // ← You’ll see this in console
+      refreshSessions();
+    };
 
-  const sessions: ReadingSession[] = Array.isArray(appData?.sessions)
-    ? appData.sessions
-    : [];
+    window.addEventListener("readingSessionCompleted", handleSessionCompleted);
 
-  // Stats calculations
+    return () => {
+      window.removeEventListener(
+        "readingSessionCompleted",
+        handleSessionCompleted
+      );
+    };
+  }, [refreshSessions]); // ← ONLY refreshSessions here!
+
+  // Safe extraction
+  const books: Book[] = useMemo(() => {
+    const raw = Array.isArray(appData?.books) ? appData.books : [];
+    return raw.filter(
+      (book): book is Book =>
+        !!book &&
+        typeof book === "object" &&
+        typeof book.id === "string" &&
+        !book.id.startsWith("temp-")
+    );
+  }, [appData?.books]);
+
+  const sessions: ReadingSession[] = useMemo(() => {
+    return Array.isArray(appData?.sessions) ? appData.sessions : [];
+  }, [appData?.sessions]);
+
   const totalReadingMinutes = useMemo(() => {
     return sessions.reduce((total, s) => total + (s.duration ?? 0), 0);
   }, [sessions]);
@@ -148,16 +166,14 @@ export default function Dashboard({
   }, [sessions]);
 
   const calculatedStreak = useMemo(() => {
-    if (!Array.isArray(sessions) || sessions.length === 0) return 0;
+    if (sessions.length === 0) return 0;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dates = new Set<string>();
-    sessions.forEach((s) => {
-      const date = new Date(s.date);
-      dates.add(date.toISOString().split("T")[0]);
-    });
+    const dates = new Set(
+      sessions.map((s) => new Date(s.date).toISOString().split("T")[0])
+    );
 
     let streak = 0;
     for (let i = 0; i < 365; i++) {
@@ -166,16 +182,14 @@ export default function Dashboard({
       const dateStr = checkDate.toISOString().split("T")[0];
       if (dates.has(dateStr)) {
         streak++;
-      } else if (i > 0) {
-        break;
-      }
+      } else if (i > 0) break;
     }
     return streak;
   }, [sessions]);
 
   return (
     <div className="min-h-screen bg-[#FAF2E5]">
-      {/* Welcome Banner */}
+      {/* ... rest of your JSX exactly the same ... */}
       <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-[#DBDAAE] px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto py-5">
           <AnimatePresence>
@@ -188,7 +202,7 @@ export default function Dashboard({
               >
                 <div className="text-center sm:text-left">
                   <h2 className="text-2xl sm:text-3xl font-bold text-[#5D6939] flex items-center gap-3">
-                    Welcome back, {userName}! Wave
+                    Welcome back, {userName}!
                   </h2>
                   <p className="text-sm text-[#5D6939]/80 mt-1">
                     Keep up the great reading journey
@@ -219,7 +233,6 @@ export default function Dashboard({
             )}
           </AnimatePresence>
 
-          {/* Mini Stats */}
           {!showWelcome && (
             <div className="flex flex-wrap justify-center sm:justify-end gap-3 py-3">
               <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-xl border-2 border-green-200">
@@ -242,7 +255,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border-2 border-purple-200">
+              {/* <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border-2 border-purple-200">
                 <Clock className="w-5 h-5 text-purple-600" />
                 <div>
                   <div className="font-bold text-purple-700 text-lg">
@@ -251,7 +264,7 @@ export default function Dashboard({
                   </div>
                   <div className="text-xs text-purple-600">read time</div>
                 </div>
-              </div>
+              </div> */}
 
               <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl border-2 border-amber-200">
                 <TrendingUp className="w-5 h-5 text-amber-600" />
@@ -267,7 +280,6 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <TimerCard />
@@ -287,32 +299,33 @@ export default function Dashboard({
             books={books}
             sessions={sessions}
           />
-
-          {/* FINAL FIXED BooksSection */}
           <BooksSection
             books={books}
             setBooks={(newBooks: Book[]) => {
-              if (!appData) return;
-              const updated: AppData = { ...appData, books: newBooks };
-              setAppData(updated);
-              propSetAppData?.(updated);
+              setAppData((prev) => {
+                if (!prev) return prev;
+                const updated = { ...prev, books: newBooks };
+                propSetAppData?.(updated);
+                return updated;
+              });
             }}
             updateBook={(updatedBook: Partial<Book> & { id: string }) => {
-              if (!appData) return;
-              const updatedBooks = (appData.books || []).map((b: Book) =>
-                b.id === updatedBook.id ? { ...b, ...updatedBook } : b
-              );
-              const updated: AppData = { ...appData, books: updatedBooks };
-              setAppData(updated);
-              propSetAppData?.(updated);
+              setAppData((prev) => {
+                if (!prev) return prev;
+                const updatedBooks = (prev.books || []).map((b: Book) =>
+                  b.id === updatedBook.id ? { ...b, ...updatedBook } : b
+                );
+                const updated = { ...prev, books: updatedBooks };
+                propSetAppData?.(updated);
+                return updated;
+              });
             }}
             onSessionsUpdate={refreshSessions}
-            onRefresh={refreshBooks} // This fixes everything
+            onRefresh={refreshBooks}
           />
         </div>
       </main>
 
-      {/* Tutorial */}
       {showTutorial !== "pending" && (
         <TutorialModal
           open={showTutorial as boolean}

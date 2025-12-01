@@ -1,7 +1,4 @@
-// components/CalendarCard.tsx
 "use client";
-
-import React from "react";
 import { Calendar, Flame } from "lucide-react";
 
 interface Session {
@@ -26,27 +23,26 @@ export default function CalendarCard({ sessions }: CalendarCardProps) {
 
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // Get sessions for a specific day
+  const toLocalDateString = (date: Date | string): string => {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
   const getSessionsForDay = (day: number): Session[] => {
-    const dateStr = new Date(year, month, day).toISOString().split("T")[0];
-
+    const targetDateStr = toLocalDateString(new Date(year, month, day));
     return sessions.filter((s) => {
-      const sessionDate =
-        typeof s.date === "string"
-          ? s.date.split("T")[0]
-          : new Date(s.date).toISOString().split("T")[0];
-
-      return sessionDate === dateStr;
+      return toLocalDateString(s.date) === targetDateStr;
     });
   };
 
-  // Get total pages read on a specific day
   const getPagesForDay = (day: number): number => {
     const daySessions = getSessionsForDay(day);
     return daySessions.reduce((sum, s) => sum + (s.pagesRead || 0), 0);
   };
 
-  // Determine heat level (0–4)
   const getHeatLevel = (pages: number): number => {
     if (pages === 0) return 0;
     if (pages < 10) return 1;
@@ -55,50 +51,54 @@ export default function CalendarCard({ sessions }: CalendarCardProps) {
     return 4;
   };
 
-  // Your custom color scheme!
   const heatColors = [
-    "bg-[#FAF2E5] border-2 border-[#DBDAAE]/40 text-[#5D6939]/50", // none
-    "bg-[#DBDAAE]/40 border-2 border-[#DBDAAE]/60 text-[#5D6939]", // light
-    "bg-[#AAB97E]/50 border-2 border-[#AAB97E]/70 text-[#5D6939]", // medium
-    "bg-[#AAB97E] border-2 border-[#5D6939]/30 text-white font-semibold", // good
-    "bg-[#5D6939] border-2 border-[#5D6939] text-white font-bold shadow-lg", // heavy
+    "bg-[#FAF2E5] text-[#5D6939]/40",
+    "bg-[#DBDAAE]/50 text-[#5D6939]",
+    "bg-[#AAB97E]/60 text-[#5D6939]",
+    "bg-[#AAB97E] text-white",
+    "bg-[#5D6939] text-white",
   ];
 
-  const isToday = (day: number) => {
-    return (
-      day === today.getDate() &&
-      month === today.getMonth() &&
-      year === today.getFullYear()
-    );
+  const isToday = (day: number): boolean => {
+    const todayStr = toLocalDateString(today);
+    const dayStr = toLocalDateString(new Date(year, month, day));
+    return todayStr === dayStr;
   };
 
+  const weekdaysFull = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekdaysShort = ["S", "M", "T", "W", "T", "F", "S"];
+
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-2 border-[#DBDAAE] hover:shadow-3xl transition-all duration-500">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-[#DBDAAE]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <h3 className="text-xl font-black text-[#5D6939] flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-[#5D6939] to-[#AAB97E] rounded-2xl shadow-xl">
-            <Calendar className="w-6 h-6 text-white" />
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-2 sm:p-2.5 bg-gradient-to-br from-[#5D6939] to-[#AAB97E] rounded-xl">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <div className="text-xs text-[#5D6939]/70 uppercase tracking-wider font-bold">
+            <p className="text-[10px] sm:text-xs text-[#5D6939]/60 uppercase tracking-wider font-semibold">
               Reading Activity
-            </div>
-            <div className="text-2xl font-bold">{monthYear}</div>
+            </p>
+            <h3 className="text-lg sm:text-xl font-black text-[#5D6939]">
+              {monthYear}
+            </h3>
           </div>
-        </h3>
-        <Flame className="w-8 h-8 text-[#AAB97E] animate-pulse" />
+        </div>
+        <Flame className="w-6 h-6 sm:w-7 sm:h-7 text-[#AAB97E]" />
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* Calendar Grid - Responsive gap and sizing */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2">
         {/* Weekday Labels */}
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
+        {weekdaysFull.map((day, i) => (
           <div
             key={`weekday-${i}`}
-            className="text-center text-xs font-bold text-[#5D6939]/70 uppercase tracking-wide pb-2"
+            className="text-center text-[10px] sm:text-xs font-bold text-[#5D6939]/60 uppercase pb-1 sm:pb-2"
           >
-            {day}
+            {/* Show single letter on mobile, full on larger */}
+            <span className="sm:hidden">{weekdaysShort[i]}</span>
+            <span className="hidden sm:inline">{day}</span>
           </div>
         ))}
 
@@ -107,47 +107,35 @@ export default function CalendarCard({ sessions }: CalendarCardProps) {
           <div key={`empty-${i}`} className="aspect-square" />
         ))}
 
-        {/* Calendar Days */}
+        {/* Calendar Days - Better responsive sizing */}
         {days.map((day) => {
           const pages = getPagesForDay(day);
           const daySessions = getSessionsForDay(day);
           const level = getHeatLevel(pages);
-          const isTodayDay = isToday(day);
+          const todayHighlight = isToday(day);
 
           return (
             <div
               key={day}
               className={`
-                aspect-square rounded-xl flex items-center justify-center
-                text-sm font-bold transition-all duration-300
-                hover:scale-110 hover:shadow-xl cursor-default relative group
+                aspect-square rounded-md sm:rounded-lg flex items-center justify-center
+                text-xs sm:text-sm font-semibold transition-all duration-200
+                hover:scale-105 cursor-default relative group
                 ${heatColors[level]}
-                ${isTodayDay ? "ring-4 ring-[#5D6939] ring-offset-2" : ""}
+                ${todayHighlight ? "ring-2 ring-[#5D6939] ring-offset-1" : ""}
               `}
             >
-              <span className="relative z-10">{day}</span>
+              <span>{day}</span>
 
-              {/* Tooltip on hover */}
+              {/* Tooltip - Only show on larger screens */}
               {pages > 0 && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-[#5D6939] text-white text-xs px-4 py-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-2xl border-2 border-[#AAB97E]">
-                  <div className="font-bold mb-1">
-                    {new Date(year, month, day).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                <div className="hidden sm:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#5D6939] text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                  <div className="font-bold">{pages} pages</div>
+                  <div className="text-[#AAB97E] text-[10px]">
+                    {daySessions.length} session
+                    {daySessions.length > 1 ? "s" : ""}
                   </div>
-                  <div className="text-[#AAB97E] font-semibold">
-                    {pages} pages read
-                  </div>
-                  {daySessions.length > 0 && (
-                    <div className="text-[#DBDAAE] text-xs mt-1">
-                      {daySessions.length} session
-                      {daySessions.length > 1 ? "s" : ""}
-                    </div>
-                  )}
-                  {/* Arrow */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-[6px] border-transparent border-t-[#5D6939]" />
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#5D6939]" />
                 </div>
               )}
             </div>
@@ -155,14 +143,16 @@ export default function CalendarCard({ sessions }: CalendarCardProps) {
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-8 flex items-center justify-center gap-3 text-sm">
-        <span className="text-[#5D6939]/70 font-bold">Less</span>
-        <div className="flex gap-2">
+      {/* Legend - Responsive sizing and layout */}
+      <div className="mt-4 sm:mt-6 flex items-center justify-center gap-1.5 sm:gap-2 text-xs">
+        <span className="text-[#5D6939]/60 font-medium text-[10px] sm:text-xs">
+          Less
+        </span>
+        <div className="flex gap-1 sm:gap-1.5">
           {[0, 1, 2, 3, 4].map((level) => (
             <div
               key={level}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shadow-md transition-transform hover:scale-110 ${heatColors[level]}`}
+              className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded sm:rounded-md ${heatColors[level]}`}
               title={
                 level === 0
                   ? "No activity"
@@ -174,20 +164,12 @@ export default function CalendarCard({ sessions }: CalendarCardProps) {
                   ? "30-59 pages"
                   : "60+ pages"
               }
-            >
-              {level === 4 ? "60+" : level === 0 ? "" : level}
-            </div>
+            />
           ))}
         </div>
-        <span className="text-[#5D6939]/70 font-bold">More</span>
-      </div>
-
-      {/* Motivational Message */}
-      <div className="mt-6 text-center">
-        <p className="text-[#5D6939]/80 text-sm font-medium">
-          Keep the streak alive
-          <Flame className="inline w-5 h-5 ml-2 text-[#AAB97E] animate-pulse" />
-        </p>
+        <span className="text-[#5D6939]/60 font-medium text-[10px] sm:text-xs">
+          More
+        </span>
       </div>
     </div>
   );

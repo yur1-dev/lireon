@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Play, Pause, RotateCcw, Check } from "lucide-react";
+import { Play, Pause, RotateCcw, Check, Sparkles } from "lucide-react";
 
 export default function TimerCard() {
   const [minutes, setMinutes] = useState(25);
@@ -12,36 +12,76 @@ export default function TimerCard() {
   const [totalInitialSeconds, setTotalInitialSeconds] = useState<number>(
     25 * 60
   );
-
-  // This makes the circle update every second with smooth animation
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [justFinished, setJustFinished] = useState(false);
 
+  // Save session + notify Dashboard to refresh stats
+  const saveReadingSession = async (durationMinutes: number) => {
+    try {
+      const response = await fetch("/api/reading-sessions", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          duration: Math.round(durationMinutes),
+          date: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save session");
+
+      // Notify Dashboard to refresh total time, streak, etc.
+      window.dispatchEvent(new CustomEvent("readingSessionCompleted"));
+
+      // Show success feedback
+      setJustFinished(true);
+      setTimeout(() => setJustFinished(false), 4000);
+    } catch (error) {
+      console.error("Failed to save reading session:", error);
+      // Optional: show error toast
+    }
+  };
+
+  // Main timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
     if (isRunning) {
       interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
+        setElapsedSeconds((prev) => {
+          const newElapsed = prev + 1;
+          const total = totalInitialSeconds;
 
-        if (seconds === 0 && minutes === 0) {
-          setIsRunning(false);
-          setSelectedPreset(null);
-          setElapsedSeconds(0);
-        } else if (seconds === 0) {
-          setMinutes((m) => m - 1);
-          setSeconds(59);
-        } else {
-          setSeconds((s) => s - 1);
-        }
+          // Timer finished!
+          if (newElapsed >= total) {
+            setIsRunning(false);
+            setSelectedPreset(null);
+            saveReadingSession(total / 60); // Save full intended duration
+            return 0;
+          }
+
+          // Update displayed time
+          const remaining = total - newElapsed;
+          setMinutes(Math.floor(remaining / 60));
+          setSeconds(remaining % 60);
+
+          return newElapsed;
+        });
       }, 1000);
     } else {
-      setElapsedSeconds(0);
+      // Reset display when stopped (but not when just finished)
+      if (elapsedSeconds === 0) {
+        setMinutes(Math.floor(totalInitialSeconds / 60));
+        setSeconds(0);
+      }
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, minutes, seconds]);
+  }, [isRunning, totalInitialSeconds]);
 
   const startTimer = (mins: number) => {
     const total = mins * 60;
@@ -51,6 +91,7 @@ export default function TimerCard() {
     setElapsedSeconds(0);
     setIsRunning(true);
     setSelectedPreset(mins);
+    setJustFinished(false);
   };
 
   const resetTimer = () => {
@@ -60,9 +101,9 @@ export default function TimerCard() {
     setElapsedSeconds(0);
     setSelectedPreset(null);
     setTotalInitialSeconds(25 * 60);
+    setJustFinished(false);
   };
 
-  const currentTotalSeconds = minutes * 60 + seconds;
   const remainingSeconds = totalInitialSeconds - elapsedSeconds;
   const progress =
     totalInitialSeconds > 0
@@ -98,11 +139,10 @@ export default function TimerCard() {
         </div>
       </div>
 
-      {/* ULTRA SMOOTH Circle */}
+      {/* Circle + Time */}
       <div className="flex-1 flex items-center justify-center my-4">
         <div className="relative w-44 h-44 sm:w-48 sm:h-48">
           <svg className="w-full h-full -rotate-90">
-            {/* Background ring */}
             <circle
               cx="50%"
               cy="50%"
@@ -112,8 +152,6 @@ export default function TimerCard() {
               fill="none"
               opacity="0.25"
             />
-
-            {/* Progress ring — now silky smooth every second */}
             <circle
               cx="50%"
               cy="50%"
@@ -124,9 +162,8 @@ export default function TimerCard() {
               strokeDasharray="792"
               strokeDashoffset={`${792 * (1 - progress / 100)}`}
               strokeLinecap="round"
-              className="transition-all duration-950 ease-linear" // ← this makes it buttery
+              className="transition-all duration-950 ease-linear"
             />
-
             <defs>
               <linearGradient id="grad">
                 <stop offset="0%" stopColor="#AAB97E" />
@@ -135,14 +172,23 @@ export default function TimerCard() {
             </defs>
           </svg>
 
-          {/* Time display */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
             <div className="text-5xl font-black text-[#5D6939] tracking-wider drop-shadow-md">
               {String(minutes).padStart(2, "0")}:
               {String(seconds).padStart(2, "0")}
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Success Message */}
+      <div className="h-8 mb-2 flex items-center justify-center">
+        {justFinished && (
+          <div className="flex items-center gap-2 text-green-600 font-bold animate-bounce">
+            <Sparkles className="w-5 h-5" />
+            <span>Session saved! +{totalInitialSeconds / 60} min added</span>
+          </div>
+        )}
       </div>
 
       {/* Presets */}
@@ -156,14 +202,13 @@ export default function TimerCard() {
               ${
                 isRunning
                   ? "opacity-50 cursor-not-allowed"
-                  : "cursor-pointer hover:scale-105 active:scale-95 hover:bg-[#DBDAAE]/40"
+                  : "cursor-pointer hover:scale-105 active:scale-95"
               }
               ${
                 selectedPreset === m && isRunning
                   ? "bg-[#5D6939] text-white ring-4 ring-[#5D6939]/30"
-                  : "bg-[#FAF2E5] text-[#5D6939] border border-[#DBDAAE]"
-              }
-            `}
+                  : "bg-[#FAF2E5] text-[#5D6939] border border-[#DBDAAE] hover:bg-[#DBDAAE]/40"
+              }`}
           >
             {selectedPreset === m && isRunning ? (
               <>
@@ -182,7 +227,7 @@ export default function TimerCard() {
         <button
           onClick={() => setIsRunning(!isRunning)}
           disabled={!isRunning && selectedPreset === null}
-          className={`flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl transition-all active:scale-95 cursor-pointer
+          className={`flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl transition-all active:scale-95
             ${
               isRunning
                 ? "bg-orange-600 hover:bg-orange-700"
@@ -191,7 +236,7 @@ export default function TimerCard() {
             ${
               !isRunning && selectedPreset === null
                 ? "opacity-50 cursor-not-allowed"
-                : ""
+                : "cursor-pointer"
             }
           `}
         >
@@ -205,14 +250,14 @@ export default function TimerCard() {
 
         <button
           onClick={resetTimer}
-          className="p-4 bg-[#DBDAAE]/50 rounded-2xl hover:bg-[#DBDAAE]/80 transition-all shadow-md cursor-pointer active:scale-95"
+          className="p-4 bg-[#DBDAAE]/50 rounded-2xl hover:bg-[#DBDAAE]/80 transition-all shadow-md active:scale-95"
         >
           <RotateCcw className="w-5 h-5 text-[#5D6939]" />
         </button>
       </div>
 
-      {/* Victory */}
-      {currentTotalSeconds === 0 && !isRunning && (
+      {/* Old victory text (kept for pause/resume cases) */}
+      {remainingSeconds === 0 && !isRunning && !justFinished && (
         <p className="text-center mt-6 text-lg font-bold text-[#AAB97E] animate-pulse">
           Great session!
         </p>
