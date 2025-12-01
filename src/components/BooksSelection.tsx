@@ -1,6 +1,5 @@
 // components/BooksSection.tsx
 "use client";
-
 import React, { useState } from "react";
 import {
   Plus,
@@ -13,9 +12,9 @@ import {
   BookMarked,
   CheckCircle,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
-// ✅ Updated to match the Book type from types/index.ts
 interface BookType {
   id: string;
   title: string;
@@ -34,6 +33,8 @@ interface BooksSectionProps {
   setBooks: (books: BookType[]) => void;
   updateBook: (book: Partial<BookType> & { id: string }) => void;
   onSessionsUpdate?: () => void;
+  // Optional: for better cache busting in parent
+  onRefresh?: () => Promise<void>;
 }
 
 export default function BooksSection({
@@ -41,6 +42,7 @@ export default function BooksSection({
   setBooks,
   updateBook,
   onSessionsUpdate,
+  onRefresh,
 }: BooksSectionProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -63,6 +65,12 @@ export default function BooksSection({
     "all" | "to-read" | "reading" | "completed"
   >("all");
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    bookId: string;
+    bookTitle: string;
+  } | null>(null);
+
   // ADD BOOK
   const handleAddBook = async () => {
     const title = newBook.title.trim();
@@ -75,7 +83,6 @@ export default function BooksSection({
     }
 
     setIsAdding(true);
-
     try {
       const res = await fetch("/api/books", {
         method: "POST",
@@ -83,28 +90,27 @@ export default function BooksSection({
         body: JSON.stringify({ title, author, totalPages }),
       });
 
-      if (!res.ok) throw new Error("Failed to add book");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to add book");
+      }
 
       const savedBook: BookType = await res.json();
       setBooks([...books, savedBook]);
       setNewBook({ title: "", author: "", totalPages: "" });
       setShowAdd(false);
     } catch (err) {
-      console.error(err);
-      alert("Failed to add book");
+      alert(err instanceof Error ? err.message : "Failed to add book");
     } finally {
       setIsAdding(false);
     }
   };
 
-  // DELETE BOOK
-  const handleDeleteBook = async (bookId: string, bookTitle: string) => {
-    const confirmDelete = confirm(
-      `Are you sure you want to delete "${bookTitle}"? This will also delete all reading sessions for this book.`
-    );
+  // DELETE BOOK – NOW FIXED
+  const handleDeleteBook = async () => {
+    if (!deleteConfirm) return;
 
-    if (!confirmDelete) return;
-
+    const { bookId, bookTitle } = deleteConfirm;
     setDeletingBook((prev) => ({ ...prev, [bookId]: true }));
 
     try {
@@ -113,24 +119,33 @@ export default function BooksSection({
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to delete: ${errorText}`);
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete book");
       }
 
-      // Remove book from state
-      setBooks(books.filter((b) => b.id !== bookId));
+      const result = await res.json();
+      console.log("Book deleted:", result);
 
-      // Refresh sessions if callback provided
-      if (onSessionsUpdate) {
+      // Optimistically remove from UI
+      setBooks((prevBooks) => prevBooks.filter((b) => b.id !== bookId));
+
+      // Trigger parent refresh (SWR, useEffect, server component, etc.)
+      if (onRefresh) {
+        await onRefresh(); // This is the key fix
+      } else if (onSessionsUpdate) {
         onSessionsUpdate();
       }
+
+      setDeleteConfirm(null);
     } catch (err) {
-      console.error("❌ Delete book error:", err);
+      console.error("Delete error:", err);
       alert(
-        `Failed to delete book: ${
+        `Failed to delete "${bookTitle}": ${
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
+      // Revert optimistic update on error
+      // (optional: you could refetch here too)
     } finally {
       setDeletingBook((prev) => ({ ...prev, [bookId]: false }));
     }
@@ -142,6 +157,11 @@ export default function BooksSection({
     newStatus: BookType["status"]
   ) => {
     setUpdatingStatus((prev) => ({ ...prev, [bookId]: true }));
+    const originalBook = books.find((b) => b.id === bookId);
+    if (!originalBook) return;
+
+    // Optimistic update
+    updateBook({ id: bookId, status: newStatus });
 
     try {
       const res = await fetch(`/api/books/${bookId}`, {
@@ -150,20 +170,13 @@ export default function BooksSection({
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to update: ${errorText}`);
-      }
-
+      if (!res.ok) throw new Error("Failed to update status");
       const updated = await res.json();
       updateBook(updated);
     } catch (err) {
-      console.error("❌ Status update error:", err);
-      alert(
-        `Failed to update status: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
+      // Revert on error
+      updateBook({ id: bookId, status: originalBook.status });
+      alert("Failed to update status");
     } finally {
       setUpdatingStatus((prev) => ({ ...prev, [bookId]: false }));
     }
@@ -186,33 +199,21 @@ export default function BooksSection({
       const res = await fetch("/api/reading-sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookId,
-          pagesRead: pages,
-        }),
+        body: JSON.stringify({ bookId, pagesRead: pages }),
       });
 
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Failed to log pages");
-      }
+      if (!res.ok) throw new Error(await res.text());
 
       const { book: updatedBook } = await res.json();
       updateBook(updatedBook);
       setLogPages((prev) => ({ ...prev, [bookId]: 0 }));
 
-      if (onSessionsUpdate) {
-        onSessionsUpdate();
-      }
-
+      if (onSessionsUpdate) onSessionsUpdate();
       if (isCompleted) {
         alert(`Congratulations! You finished "${book.title}"!`);
       }
-    } catch (err: unknown) {
-      console.error(err);
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to log pages";
-      alert(errorMessage);
+    } catch (err: any) {
+      alert(err.message || "Failed to log pages");
     } finally {
       setLoggingPages((prev) => ({ ...prev, [bookId]: false }));
     }
@@ -226,17 +227,15 @@ export default function BooksSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating }),
       });
-
-      if (!res.ok) throw new Error("Failed");
-
+      if (!res.ok) throw new Error("Failed to save rating");
       const updated = await res.json();
       updateBook(updated);
-    } catch {
+    } catch (err) {
       alert("Failed to save rating");
     }
   };
 
-  // Filter books
+  // FILTERING
   const filteredBooks =
     filterStatus === "all"
       ? books
@@ -251,28 +250,72 @@ export default function BooksSection({
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 border-2 border-[#DBDAAE] lg:col-span-3">
-      {/* Header */}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm?.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-2 border-red-200">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-xl text-[#5D6939] mb-2">
+                  Delete Book?
+                </h3>
+                <p className="text-sm text-[#5D6939]/70 leading-relaxed">
+                  Are you sure you want to delete{" "}
+                  <span className="font-bold">"{deleteConfirm.bookTitle}"</span>
+                  ? This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deletingBook[deleteConfirm.bookId]}
+                className="flex-1 px-4 py-3 bg-[#FAF2E5] text-[#5D6939] rounded-xl font-bold hover:bg-[#DBDAAE] transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteBook}
+                disabled={deletingBook[deleteConfirm.bookId]}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingBook[deleteConfirm.bookId] ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header & Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-br from-[#5D6939] to-[#AAB97E] rounded-xl">
-            <Book className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            <Book className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-black text-xl md:text-2xl text-[#5D6939]">
-              My Library
-            </h3>
-            <p className="text-xs md:text-sm text-[#AAB97E]">
-              {books.length} {books.length === 1 ? "book" : "books"}
-            </p>
+            <h3 className="font-black text-2xl text-[#5D6939]">My Library</h3>
+            <p className="text-sm text-[#AAB97E]">{books.length} books</p>
           </div>
         </div>
-
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className="w-full sm:w-auto bg-[#5D6939] text-white px-4 md:px-5 py-2.5 md:py-3 rounded-xl hover:bg-[#4a552d] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+          className="bg-[#5D6939] text-white px-5 py-3 rounded-xl hover:bg-[#4a552d] flex items-center gap-2 font-bold shadow-md"
         >
-          <Plus className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="font-bold text-sm md:text-base">Add Book</span>
+          <Plus className="w-5 h-5" />
+          Add Book
         </button>
       </div>
 
@@ -283,25 +326,20 @@ export default function BooksSection({
           { key: "reading", label: "Reading", icon: BookOpen },
           { key: "to-read", label: "Want to Read", icon: BookMarked },
           { key: "completed", label: "Finished", icon: CheckCircle },
-        ].map((filter) => {
-          const Icon = filter.icon;
+        ].map((f) => {
+          const Icon = f.icon;
           return (
             <button
-              key={filter.key}
-              onClick={() => setFilterStatus(filter.key as typeof filterStatus)}
-              className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
-                filterStatus === filter.key
-                  ? "bg-[#5D6939] text-white shadow-md"
+              key={f.key}
+              onClick={() => setFilterStatus(f.key as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                filterStatus === f.key
+                  ? "bg-[#5D6939] text-white"
                   : "bg-[#FAF2E5] text-[#5D6939] hover:bg-[#DBDAAE]/50"
               }`}
             >
               <Icon className="w-4 h-4" />
-              <span>
-                {filter.label}
-                <span className="ml-1 opacity-70">
-                  ({statusCounts[filter.key as keyof typeof statusCounts]})
-                </span>
-              </span>
+              {f.label} ({statusCounts[f.key as keyof typeof statusCounts]})
             </button>
           );
         })}
@@ -309,36 +347,30 @@ export default function BooksSection({
 
       {/* Add Form */}
       {showAdd && (
-        <div className="bg-[#FAF2E5] rounded-xl p-4 md:p-6 mb-6 shadow-md border-2 border-[#DBDAAE]">
+        <div className="bg-[#FAF2E5] rounded-xl p-6 mb-6 border-2 border-[#DBDAAE]">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold text-base md:text-lg text-[#5D6939]">
-              Add New Book
-            </h4>
-            <button
-              onClick={() => setShowAdd(false)}
-              className="p-1 hover:bg-white rounded-lg transition-all cursor-pointer"
-            >
-              <X className="w-5 h-5 text-[#5D6939]" />
+            <h4 className="font-bold text-lg text-[#5D6939]">Add New Book</h4>
+            <button onClick={() => setShowAdd(false)}>
+              <X className="w-6 h-6" />
             </button>
           </div>
-
           <div className="space-y-3">
             <input
-              placeholder="Book Title"
+              placeholder="Title"
               value={newBook.title}
               onChange={(e) =>
                 setNewBook({ ...newBook, title: e.target.value })
               }
-              className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] focus:outline-none text-sm md:text-base"
+              className="w-full px-4 py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] outline-none"
               disabled={isAdding}
             />
             <input
-              placeholder="Author Name"
+              placeholder="Author"
               value={newBook.author}
               onChange={(e) =>
                 setNewBook({ ...newBook, author: e.target.value })
               }
-              className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] focus:outline-none text-sm md:text-base"
+              className="w-full px-4 py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] outline-none"
               disabled={isAdding}
             />
             <input
@@ -348,15 +380,15 @@ export default function BooksSection({
               onChange={(e) =>
                 setNewBook({ ...newBook, totalPages: e.target.value })
               }
-              className="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] focus:outline-none text-sm md:text-base"
+              className="w-full px-4 py-3 border-2 border-[#DBDAAE] rounded-lg focus:border-[#5D6939] outline-none"
               disabled={isAdding}
             />
             <button
               onClick={handleAddBook}
               disabled={isAdding}
-              className="w-full bg-[#5D6939] text-white py-2.5 md:py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#4a552d] transition-all disabled:opacity-50 cursor-pointer text-sm md:text-base"
+              className="w-full bg-[#5D6939] text-white py-3 rounded-xl font-bold hover:bg-[#4a552d] disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isAdding && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isAdding ? <Loader2 className="animate-spin" /> : null}
               {isAdding ? "Adding..." : "Add to Library"}
             </button>
           </div>
@@ -365,16 +397,16 @@ export default function BooksSection({
 
       {/* Books Grid */}
       {filteredBooks.length === 0 ? (
-        <div className="text-center py-12 md:py-16 bg-[#FAF2E5] rounded-xl border-2 border-dashed border-[#DBDAAE]">
-          <Book className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-[#AAB97E]" />
-          <p className="text-sm md:text-base text-[#5D6939]/70 font-medium">
+        <div className="text-center py-16 bg-[#FAF2E5] rounded-xl border-2 border-dashed border-[#DBDAAE]">
+          <Book className="w-16 h-16 mx-auto mb-4 text-[#AAB97E]" />
+          <p className="text-[#5D6939]/70 font-medium">
             {filterStatus === "all"
-              ? "No books yet. Start building your library!"
-              : `No ${filterStatus.replace("-", " ")} books`}
+              ? "No books yet!"
+              : `No ${filterStatus} books`}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBooks.map((book) => {
             const progress = Math.round(
               (book.currentPage / book.totalPages) * 100
@@ -384,82 +416,77 @@ export default function BooksSection({
             return (
               <div
                 key={book.id}
-                className="bg-gradient-to-br from-white to-[#FAF2E5] rounded-xl p-4 md:p-5 shadow-md border-2 border-[#DBDAAE] hover:shadow-xl transition-all relative"
+                className="bg-gradient-to-br from-white to-[#FAF2E5] rounded-xl p-5 shadow-md border-2 border-[#DBDAAE] hover:shadow-xl transition-all relative"
               >
-                {/* Delete Button */}
                 <button
-                  onClick={() => handleDeleteBook(book.id, book.title)}
+                  onClick={() =>
+                    setDeleteConfirm({
+                      show: true,
+                      bookId: book.id,
+                      bookTitle: book.title,
+                    })
+                  }
                   disabled={deletingBook[book.id]}
-                  className="absolute top-3 right-3 p-1.5 bg-red-50 hover:bg-red-100 rounded-lg transition-all cursor-pointer disabled:opacity-50 group"
-                  title="Delete book"
+                  className="absolute top-3 right-3 p-2 bg-red-50 hover:bg-red-100 rounded-lg disabled:opacity-50"
                 >
                   {deletingBook[book.id] ? (
                     <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4 text-red-400 group-hover:text-red-600" />
+                    <Trash2 className="w-4 h-4 text-red-500" />
                   )}
                 </button>
 
-                {/* Book Header */}
-                <div className="flex justify-between items-start mb-3 pr-8">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-base md:text-lg text-[#5D6939] truncate">
-                      {book.title}
-                    </h4>
-                    <p className="text-xs md:text-sm text-[#AAB97E] italic truncate">
-                      {book.author}
-                    </p>
+                <div className="mb-3 pr-8">
+                  <h4 className="font-bold text-lg text-[#5D6939] truncate">
+                    {book.title}
+                  </h4>
+                  <p className="text-sm italic text-[#AAB97E] truncate">
+                    {book.author}
+                  </p>
+                </div>
+
+                {rating > 0 && (
+                  <div className="flex items-center gap-1 absolute top-3 left-12 bg-yellow-50 px-2 py-1 rounded border border-yellow-300">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    <span className="font-bold text-yellow-700">{rating}</span>
                   </div>
-                  {rating > 0 && (
-                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200 shrink-0 ml-2">
-                      <Star className="w-3 h-3 md:w-4 md:h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="text-xs md:text-sm font-bold text-yellow-700">
-                        {rating}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                )}
 
-                {/* Progress Info */}
-                <div className="flex items-center justify-between text-xs md:text-sm mb-3">
-                  <span className="text-[#5D6939]/70 font-medium">
-                    {book.currentPage} / {book.totalPages} pages
+                <div className="text-sm mb-2">
+                  <span className="text-[#5D6939]/70">
+                    {book.currentPage} / {book.totalPages}
                   </span>
-                  <span className="font-black text-[#5D6939]">{progress}%</span>
+                  <span className="float-right font-black text-[#5D6939]">
+                    {progress}%
+                  </span>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="w-full bg-[#DBDAAE]/30 rounded-full h-2.5 mb-4 overflow-hidden">
+                <div className="w-full bg-[#DBDAAE]/30 rounded-full h-3 mb-4">
                   <div
-                    className="h-full bg-gradient-to-r from-[#AAB97E] to-[#5D6939] rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-[#AAB97E] to-[#5D6939] rounded-full transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
 
-                {/* Status Selector */}
                 <select
                   value={book.status}
                   onChange={(e) =>
-                    handleStatusChange(
-                      book.id,
-                      e.target.value as BookType["status"]
-                    )
+                    handleStatusChange(book.id, e.target.value as any)
                   }
                   disabled={updatingStatus[book.id]}
-                  className="w-full mb-3 px-3 py-2 border-2 border-[#DBDAAE] rounded-lg bg-white text-xs md:text-sm font-medium text-[#5D6939] cursor-pointer focus:border-[#5D6939] focus:outline-none"
+                  className="w-full mb-3 px-3 py-2 border-2 border-[#DBDAAE] rounded-lg bg-white text-sm font-medium"
                 >
                   <option value="to-read">Want to Read</option>
                   <option value="reading">Currently Reading</option>
                   <option value="completed">Finished</option>
                 </select>
 
-                {/* Log Pages Input */}
                 {book.status === "reading" && (
                   <div className="flex gap-2">
                     <input
                       type="number"
-                      placeholder="Pages read"
-                      className="flex-1 px-3 py-2 border-2 border-[#DBDAAE] rounded-lg text-xs md:text-sm focus:border-[#5D6939] focus:outline-none"
+                      placeholder="Pages"
+                      className="flex-1 px-3 py-2 border-2 border-[#DBDAAE] rounded-lg text-sm"
                       value={logPages[book.id] || ""}
                       onChange={(e) =>
                         setLogPages({
@@ -471,34 +498,27 @@ export default function BooksSection({
                     <button
                       onClick={() => handleLogPages(book.id)}
                       disabled={loggingPages[book.id]}
-                      className="bg-[#5D6939] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-bold hover:bg-[#4a552d] transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                      className="bg-[#5D6939] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#4a552d] disabled:opacity-50"
                     >
                       {loggingPages[book.id] ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          Log
-                        </>
+                        "Log"
                       )}
                     </button>
                   </div>
                 )}
 
-                {/* Rating Section */}
                 {book.status === "completed" && rating === 0 && (
-                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
-                    <p className="text-xs md:text-sm font-bold text-[#5D6939] mb-2">
-                      Rate this book:
-                    </p>
-                    <div className="flex gap-1 justify-center">
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 text-center">
+                    <p className="font-bold text-sm mb-2">Rate this book:</p>
+                    <div className="flex justify-center gap-2">
                       {[1, 2, 3, 4, 5].map((r) => (
                         <button
                           key={r}
                           onClick={() => handleRating(book.id, r)}
-                          className="hover:scale-125 transition-transform cursor-pointer"
                         >
-                          <Star className="w-6 h-6 md:w-7 md:h-7 text-yellow-400 hover:text-yellow-500 hover:fill-yellow-500" />
+                          <Star className="w-7 h-7 text-yellow-400 hover:fill-yellow-500 hover:text-yellow-500 transition" />
                         </button>
                       ))}
                     </div>
