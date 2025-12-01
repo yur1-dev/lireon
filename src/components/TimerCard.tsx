@@ -15,15 +15,12 @@ export default function TimerCard() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [justFinished, setJustFinished] = useState(false);
 
-  // Save session + notify Dashboard to refresh stats
   const saveReadingSession = async (durationMinutes: number) => {
     try {
       const response = await fetch("/api/reading-sessions", {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           duration: Math.round(durationMinutes),
           date: new Date().toISOString(),
@@ -32,19 +29,15 @@ export default function TimerCard() {
 
       if (!response.ok) throw new Error("Failed to save session");
 
-      // Notify Dashboard to refresh total time, streak, etc.
       window.dispatchEvent(new CustomEvent("readingSessionCompleted"));
 
-      // Show success feedback
       setJustFinished(true);
       setTimeout(() => setJustFinished(false), 4000);
     } catch (error) {
       console.error("Failed to save reading session:", error);
-      // Optional: show error toast
     }
   };
 
-  // Main timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -54,28 +47,22 @@ export default function TimerCard() {
           const newElapsed = prev + 1;
           const total = totalInitialSeconds;
 
-          // Timer finished!
           if (newElapsed >= total) {
             setIsRunning(false);
             setSelectedPreset(null);
-            saveReadingSession(total / 60); // Save full intended duration
+            saveReadingSession(total / 60);
             return 0;
           }
 
-          // Update displayed time
           const remaining = total - newElapsed;
           setMinutes(Math.floor(remaining / 60));
           setSeconds(remaining % 60);
-
           return newElapsed;
         });
       }, 1000);
-    } else {
-      // Reset display when stopped (but not when just finished)
-      if (elapsedSeconds === 0) {
-        setMinutes(Math.floor(totalInitialSeconds / 60));
-        setSeconds(0);
-      }
+    } else if (elapsedSeconds === 0) {
+      setMinutes(Math.floor(totalInitialSeconds / 60));
+      setSeconds(0);
     }
 
     return () => {
@@ -115,7 +102,7 @@ export default function TimerCard() {
   return (
     <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-5 sm:p-6 border-2 border-[#DBDAAE] hover:shadow-3xl transition-all h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4">
         <div className="p-2.5 bg-gradient-to-br from-[#5D6939] to-[#AAB97E] rounded-2xl shadow-xl">
           <svg
             className="w-7 h-7 text-white"
@@ -139,9 +126,9 @@ export default function TimerCard() {
         </div>
       </div>
 
-      {/* Circle + Time */}
-      <div className="flex-1 flex items-center justify-center my-4">
-        <div className="relative w-44 h-44 sm:w-48 sm:h-48">
+      {/* Timer Circle */}
+      <div className="flex-1 flex items-center justify-center my-2">
+        <div className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-52 md:h-52">
           <svg className="w-full h-full -rotate-90">
             <circle
               cx="50%"
@@ -172,8 +159,9 @@ export default function TimerCard() {
             </defs>
           </svg>
 
-          <div className="absolute inset-0 flex items-center justify-center flex-col">
-            <div className="text-5xl font-black text-[#5D6939] tracking-wider drop-shadow-md">
+          {/* Time Display - RESPONSIVE! */}
+          <div className="absolute inset-0 flex items-center justify-center flex-col px-4">
+            <div className="text-4xl sm:text-5xl font-black text-[#5D6939] tracking-wider drop-shadow-md text-center leading-tight">
               {String(minutes).padStart(2, "0")}:
               {String(seconds).padStart(2, "0")}
             </div>
@@ -182,10 +170,10 @@ export default function TimerCard() {
       </div>
 
       {/* Success Message */}
-      <div className="h-8 mb-2 flex items-center justify-center">
+      <div className="h-8 mb-3 flex items-center justify-center px-2">
         {justFinished && (
-          <div className="flex items-center gap-2 text-green-600 font-bold animate-bounce">
-            <Sparkles className="w-5 h-5" />
+          <div className="flex items-center gap-2 text-green-600 font-bold text-sm sm:text-base animate-bounce text-center">
+            <Sparkles className="w-5 h-5 flex-shrink-0" />
             <span>Session saved! +{totalInitialSeconds / 60} min added</span>
           </div>
         )}
@@ -198,11 +186,11 @@ export default function TimerCard() {
             key={m}
             onClick={() => startTimer(m)}
             disabled={isRunning}
-            className={`relative py-3 text-base font-bold rounded-xl transition-all duration-300 shadow-sm overflow-hidden
+            className={`relative py-3 text-sm sm:text-base font-bold rounded-xl transition-all duration-300 shadow-sm overflow-hidden
               ${
                 isRunning
                   ? "opacity-50 cursor-not-allowed"
-                  : "cursor-pointer hover:scale-105 active:scale-95"
+                  : "hover:scale-105 active:scale-95"
               }
               ${
                 selectedPreset === m && isRunning
@@ -212,7 +200,7 @@ export default function TimerCard() {
           >
             {selectedPreset === m && isRunning ? (
               <>
-                <Check className="w-5 h-5 inline-block mr-1 -ml-1" />
+                <Check className="w-4 h-4 inline-block mr-1" />
                 {m} min
               </>
             ) : (
@@ -236,9 +224,8 @@ export default function TimerCard() {
             ${
               !isRunning && selectedPreset === null
                 ? "opacity-50 cursor-not-allowed"
-                : "cursor-pointer"
-            }
-          `}
+                : ""
+            }`}
         >
           {isRunning ? (
             <Pause className="w-5 h-5" />
@@ -256,9 +243,9 @@ export default function TimerCard() {
         </button>
       </div>
 
-      {/* Old victory text (kept for pause/resume cases) */}
+      {/* Victory text */}
       {remainingSeconds === 0 && !isRunning && !justFinished && (
-        <p className="text-center mt-6 text-lg font-bold text-[#AAB97E] animate-pulse">
+        <p className="text-center mt-5 text-lg font-bold text-[#AAB97E] animate-pulse">
           Great session!
         </p>
       )}

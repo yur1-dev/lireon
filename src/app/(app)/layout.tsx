@@ -88,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Main Content */}
-        <main className="pt-24 lg:pt-24 px-6 lg:px-8 pb-12">{children}</main>
+        <main className="pt-24 lg:pt-24 px-2 lg:px-8 pb-12">{children}</main>
       </div>
     </div>
   );

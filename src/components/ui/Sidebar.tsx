@@ -29,16 +29,16 @@ export default function Sidebar() {
 
   const SidebarContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
     <>
-      {/* Centered Logo */}
-      <div className="p-6 pt-16 lg:pt-8 border-b-2 border-[#DBDAAE] flex justify-center">
+      {/* Compact Logo */}
+      <div className="p-3 sm:p-4 lg:p-6 pt-14 sm:pt-12 lg:pt-8 border-b border-[#DBDAAE] flex justify-center">
         <Link href="/dashboard" onClick={onLinkClick} className="block">
-          <div className="relative w-48 sm:w-56 md:w-64 max-w-full px-4">
+          <div className="relative w-32 sm:w-40 lg:w-56 max-w-full">
             <Image
               src="/lireon-logo.png"
               alt="Lireon"
               width={320}
               height={120}
-              className="w-full h-auto object-contain drop-shadow-2xl"
+              className="w-full h-auto object-contain drop-shadow-lg"
               priority
             />
           </div>
@@ -46,7 +46,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-6 space-y-3">
+      <nav className="flex-1 p-3 sm:p-4 lg:p-6 space-y-1.5 sm:space-y-2 lg:space-y-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;
@@ -55,26 +55,26 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={onLinkClick}
-              className={`flex items-center gap-4 px-6 py-4 rounded-2xl font-medium transition-all ${
+              className={`flex items-center gap-2.5 sm:gap-3 lg:gap-4 px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 lg:py-4 rounded-xl lg:rounded-2xl font-medium text-sm sm:text-base transition-all ${
                 active
-                  ? "bg-[#5D6939] text-white shadow-lg"
+                  ? "bg-[#5D6939] text-white shadow-md lg:shadow-lg"
                   : "text-[#5D6939] hover:bg-[#DBDAAE]/30"
               }`}
             >
-              <Icon className="w-5 h-5" />
-              {item.label}
+              <Icon className="w-4 h-4 sm:w-4.5 h-4.5 lg:w-5 lg:h-5 shrink-0" />
+              <span className="text-sm sm:text-base">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Weekly Quest */}
-      <div className="border-t-2 border-[#DBDAAE] p-6">
-        <div className="bg-[#FAF2E5] rounded-3xl p-6 border-2 border-dashed border-[#AAB97E]">
-          <p className="text-center font-bold text-[#5D6939] text-sm uppercase tracking-wider">
+      {/* Compact Weekly Quest */}
+      <div className="border-t border-[#DBDAAE] p-3 sm:p-4 lg:p-6">
+        <div className="bg-[#FAF2E5] rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 border border-dashed border-[#AAB97E]">
+          <p className="text-center font-bold text-[#5D6939] text-xs sm:text-sm uppercase tracking-wide">
             Weekly Reading Quest
           </p>
-          <p className="text-center text-xs text-[#5D6939]/70 mt-2 mb-5">
+          <p className="text-center text-[10px] sm:text-xs text-[#5D6939]/70 mt-1.5 sm:mt-2 mb-3 sm:mb-4 lg:mb-5 leading-snug">
             Print it. Fill it. Become legendary.
           </p>
           <a
@@ -82,12 +82,14 @@ export default function Sidebar() {
             download
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-4 bg-[#5D6939] text-white rounded-2xl font-bold shadow-lg hover:bg-[#4a552d] transition"
+            className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 lg:py-4 bg-[#5D6939] text-white rounded-xl lg:rounded-2xl text-sm font-bold shadow-md lg:shadow-lg hover:bg-[#4a552d] transition"
           >
-            <Download className="w-5 h-5" />
-            Download PDF
+            <Download className="w-4 h-4 sm:w-4.5 h-4.5 lg:w-5 lg:h-5" />
+            <span className="text-xs sm:text-sm lg:text-base">
+              Download PDF
+            </span>
           </a>
-          <p className="text-center text-xs italic text-[#5D6939]/70 mt-3">
+          <p className="text-center text-[10px] sm:text-xs italic text-[#5D6939]/70 mt-2 sm:mt-2.5 lg:mt-3">
             Libre i-print kahit ilang beses!
           </p>
         </div>
@@ -105,16 +107,16 @@ export default function Sidebar() {
       {/* MOBILE: Tiny Cute Hamburger */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="fixed top-4 left-4 z-[100] flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 shadow-lg border border-[#DBDAAE]/50 backdrop-blur-sm hover:shadow-xl lg:hidden"
+        className="fixed top-3 left-3 z-[100] flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 shadow-md border border-[#DBDAAE]/50 backdrop-blur-sm hover:shadow-lg lg:hidden"
         initial={false}
         animate={{ scale: isOpen ? 0 : 1, opacity: isOpen ? 0 : 1 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         style={{ pointerEvents: isOpen ? "none" : "auto" }}
       >
-        <Menu className="w-5 h-5 text-[#5D6939]" />
+        <Menu className="w-4.5 h-4.5 text-[#5D6939]" />
       </motion.button>
 
-      {/* MOBILE SIDEBAR */}
+      {/* MOBILE SIDEBAR - Much Narrower */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -127,21 +129,21 @@ export default function Sidebar() {
             />
 
             <motion.div
-              initial={{ x: -288 }}
+              initial={{ x: -240 }}
               animate={{ x: 0 }}
-              exit={{ x: -288 }}
+              exit={{ x: -240 }}
               transition={{ type: "spring", stiffness: 400, damping: 35 }}
-              className="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r-2 border-[#DBDAAE] shadow-2xl lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-60 sm:w-64 bg-white border-r border-[#DBDAAE] shadow-xl lg:hidden overflow-y-auto"
             >
               {/* Tiny Close Button */}
               <motion.button
                 onClick={() => setIsOpen(false)}
-                className="absolute top-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 shadow-md border border-[#DBDAAE]/40 hover:bg-white/100 transition-all"
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 shadow-sm border border-[#DBDAAE]/40 hover:bg-white/100 transition-all"
                 initial={{ opacity: 0, rotate: -90 }}
                 animate={{ opacity: 1, rotate: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <X className="w-4.5 h-4.5 text-[#5D6939]" />
+                <X className="w-4 h-4 text-[#5D6939]" />
               </motion.button>
 
               <SidebarContent onLinkClick={() => setIsOpen(false)} />

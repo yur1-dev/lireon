@@ -358,14 +358,14 @@ export default function BooksSection({
           <button
             key={key}
             onClick={() => setFilterStatus(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
               filterStatus === key
                 ? "bg-[#5D6939] text-white shadow-sm"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
             }`}
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{label}</span>
             <span
               className={`text-xs px-1.5 py-0.5 rounded-full ${
                 filterStatus === key ? "bg-white/20" : "bg-stone-200"

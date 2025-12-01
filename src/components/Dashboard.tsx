@@ -81,7 +81,7 @@ export default function Dashboard({
     }
   };
 
-  // Refresh sessions — now memoized so it doesn't break the listener
+  // Refresh sessions
   const refreshSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/reading-sessions", {
@@ -122,10 +122,9 @@ export default function Dashboard({
     }
   }, [propSetAppData]);
 
-  // CRITICAL FIX: This listener MUST NOT have appData in deps!
   useEffect(() => {
     const handleSessionCompleted = () => {
-      console.log("Session completed! Refreshing..."); // ← You’ll see this in console
+      console.log("Session completed! Refreshing...");
       refreshSessions();
     };
 
@@ -137,7 +136,7 @@ export default function Dashboard({
         handleSessionCompleted
       );
     };
-  }, [refreshSessions]); // ← ONLY refreshSessions here!
+  }, [refreshSessions]);
 
   // Safe extraction
   const books: Book[] = useMemo(() => {
@@ -188,36 +187,36 @@ export default function Dashboard({
   }, [sessions]);
 
   return (
-    <div className="min-h-screen bg-[#FAF2E5]">
-      {/* ... rest of your JSX exactly the same ... */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-[#DBDAAE] px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto py-5">
+    <div className="min-h-screen bg-[#FAF2E5] pb-safe">
+      {/* Fixed Header - Mobile Optimized */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-2 border-[#DBDAAE] shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <AnimatePresence>
             {showWelcome && (
               <motion.div
-                initial={{ opacity: 0, y: -30 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -30 }}
-                className="relative bg-gradient-to-r from-[#FAF2E5]/80 via-white to-[#FAF2E5]/80 rounded-2xl p-6 shadow-xl border-2 border-[#DBDAAE] flex flex-col sm:flex-row items-center justify-between gap-6"
+                exit={{ opacity: 0, y: -20 }}
+                className="relative bg-gradient-to-r from-[#FAF2E5]/80 via-white to-[#FAF2E5]/80 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-lg border-2 border-[#DBDAAE] flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6"
               >
-                <div className="text-center sm:text-left">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-[#5D6939] flex items-center gap-3">
+                <div className="text-center sm:text-left w-full sm:w-auto">
+                  <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-[#5D6939] flex items-center justify-center sm:justify-start gap-2">
                     Welcome back, {userName}!
                   </h2>
-                  <p className="text-sm text-[#5D6939]/80 mt-1">
+                  <p className="text-xs sm:text-sm text-[#5D6939]/80 mt-0.5 sm:mt-1">
                     Keep up the great reading journey
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl border-2 border-orange-200">
-                  <div className="p-2 bg-orange-200 rounded-xl">
-                    <Flame className="w-5 h-5 text-orange-600" />
+                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl sm:rounded-2xl border-2 border-orange-200 shrink-0">
+                  <div className="p-1.5 sm:p-2 bg-orange-200 rounded-lg sm:rounded-xl">
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-orange-600">
+                    <p className="text-xs sm:text-sm font-medium text-orange-600">
                       Streak
                     </p>
-                    <p className="text-2xl font-bold text-orange-700">
+                    <p className="text-lg sm:text-2xl font-bold text-orange-700">
                       {calculatedStreak} days
                     </p>
                   </div>
@@ -225,54 +224,50 @@ export default function Dashboard({
 
                 <button
                   onClick={dismissWelcome}
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 hover:bg-white shadow-md border border-[#DBDAAE]/50"
+                  className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1 sm:p-1.5 rounded-full bg-white/90 hover:bg-white shadow-md border border-[#DBDAAE]/50 transition-colors"
+                  aria-label="Dismiss welcome message"
                 >
-                  <X className="w-4 h-4 text-[#5D6939]/70" />
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#5D6939]/70" />
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
           {!showWelcome && (
-            <div className="flex flex-wrap justify-center sm:justify-end gap-3 py-3">
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-xl border-2 border-green-200">
-                <BookOpen className="w-5 h-5 text-green-600" />
+            <div className="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-green-50 rounded-lg sm:rounded-xl border-2 border-green-200">
+                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 <div>
-                  <div className="font-bold text-green-700 text-lg">
+                  <div className="font-bold text-green-700 text-sm sm:text-lg">
                     {books.length}
                   </div>
-                  <div className="text-xs text-green-600">books</div>
+                  <div className="text-[10px] sm:text-xs text-green-600">
+                    books
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-xl border-2 border-blue-200">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-50 rounded-lg sm:rounded-xl border-2 border-blue-200">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 <div>
-                  <div className="font-bold text-blue-700 text-lg">
+                  <div className="font-bold text-blue-700 text-sm sm:text-lg">
                     {appData?.user?.totalPagesRead ?? 0}
                   </div>
-                  <div className="text-xs text-blue-600">pages read</div>
+                  <div className="text-[10px] sm:text-xs text-blue-600">
+                    pages
+                  </div>
                 </div>
               </div>
 
-              {/* <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border-2 border-purple-200">
-                <Clock className="w-5 h-5 text-purple-600" />
+              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-amber-50 rounded-lg sm:rounded-xl border-2 border-amber-200">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                 <div>
-                  <div className="font-bold text-purple-700 text-lg">
-                    {Math.floor(totalReadingMinutes / 60)}h{" "}
-                    {totalReadingMinutes % 60}m
-                  </div>
-                  <div className="text-xs text-purple-600">read time</div>
-                </div>
-              </div> */}
-
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl border-2 border-amber-200">
-                <TrendingUp className="w-5 h-5 text-amber-600" />
-                <div>
-                  <div className="font-bold text-amber-700 text-lg">
+                  <div className="font-bold text-amber-700 text-sm sm:text-lg">
                     {weeklySessionCount}
                   </div>
-                  <div className="text-xs text-amber-600">this week</div>
+                  <div className="text-[10px] sm:text-xs text-amber-600">
+                    this week
+                  </div>
                 </div>
               </div>
             </div>
@@ -280,8 +275,9 @@ export default function Dashboard({
         </div>
       </div>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Main Content with proper spacing */}
+      <main className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <TimerCard />
           <CalendarCard sessions={sessions} />
           <ProgressGoalsTabs
