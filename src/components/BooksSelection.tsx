@@ -24,9 +24,9 @@ interface BookType {
   totalPages: number;
   status: "to-read" | "reading" | "completed";
   rating?: number;
-  createdAt: string | Date; // ✅ Added
-  updatedAt: string | Date; // ✅ Added
-  userId?: string; // ✅ Added for consistency
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  userId?: string;
 }
 
 interface BooksSectionProps {
@@ -59,8 +59,9 @@ export default function BooksSection({
   const [deletingBook, setDeletingBook] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [filterStatus, setFilterStatus] = useState;
-  "all" | "to-read" | "reading" | ("completed" > "all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "to-read" | "reading" | "completed"
+  >("all");
 
   // ADD BOOK
   const handleAddBook = async () => {
