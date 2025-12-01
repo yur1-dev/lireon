@@ -37,20 +37,31 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Lireon Team" }],
   creator: "Lireon",
+  metadataBase: new URL("https://lireon.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://lireon.app",
+    url: "https://lireon.vercel.app",
     title: "Lireon - Smart Reading Tracker",
     description:
       "Track your reading progress, build reading streaks, and achieve your literary goals.",
     siteName: "Lireon",
+    images: [
+      {
+        url: "/preview.png",
+        width: 1200,
+        height: 630,
+        alt: "Lireon - Smart Reading Tracker",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Lireon - Smart Reading Tracker",
     description:
       "Track your reading progress, build reading streaks, and achieve your literary goals.",
+    images: ["/preview.png"],
+    creator: "@lireon",
   },
   robots: {
     index: true,
