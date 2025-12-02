@@ -1,24 +1,57 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
+interface FormData {
+  email: string;
+  username: string;
+  password: string;
+}
+
+interface PasswordChecks {
+  length: boolean;
+  uppercase: boolean;
+  lowercase: boolean;
+  number: boolean;
+  special: boolean;
+}
+
+interface PasswordStrength {
+  checks: PasswordChecks;
+  passed: number;
+  total: number;
+}
+
+interface SignInResult {
+  error?: string;
+  ok?: boolean;
+}
+
+interface RegisterResponse {
+  error?: string;
+}
+
 export default function LoginPage() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     username: "",
     password: "",
   });
 
-  const passwordStrength = () => {
+  const passwordStrength = (): PasswordStrength | null => {
     if (isLogin || !formData.password) return null;
 
-    const checks = {
+    const checks: PasswordChecks = {
       length: formData.password.length >= 8,
       uppercase: /[A-Z]/.test(formData.password),
       lowercase: /[a-z]/.test(formData.password),
@@ -32,20 +65,8 @@ export default function LoginPage() {
 
   const strength = passwordStrength();
 
-  interface PasswordStrength {
-    checks: {
-      length: boolean;
-      uppercase: boolean;
-      lowercase: boolean;
-      number: boolean;
-      special: boolean;
-    };
-    passed: number;
-    total: number;
-  }
-
   const handleSubmit = async (
-    e: React.MouseEvent<HTMLButtonElement>
+    e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
     e.preventDefault();
     setError("");
@@ -57,11 +78,47 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (isLogin) {
+        const result = (await signIn("credentials", {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        })) as SignInResult | undefined;
+
+        if (result?.error) {
+          setError("Invalid email or password");
+        } else if (result?.ok) {
+          router.push("/dashboard");
+        }
+      } else {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        const data = (await response.json()) as RegisterResponse;
+
+        if (!response.ok) {
+          setError(data.error || "Failed to create account");
+        } else {
+          const result = (await signIn("credentials", {
+            email: formData.email,
+            password: formData.password,
+            redirect: false,
+          })) as SignInResult | undefined;
+
+          if (result?.ok) {
+            router.push("/dashboard");
+          }
+        }
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
       setLoading(false);
-      alert(isLogin ? "Logged in!" : "Account created!");
-    }, 1500);
+    }
   };
 
   return (
@@ -70,9 +127,12 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex justify-center mb-2 sm:mb-3">
-            <img
+            <Image
               src="/lireon-centered-logo.png"
               alt="Lireon – Track your reading journey"
+              width={128}
+              height={82}
+              priority
               className="w-32 h-auto sm:w-48 drop-shadow-2xl"
             />
           </div>
@@ -123,7 +183,7 @@ export default function LoginPage() {
           )}
 
           {/* Form */}
-          <div className="space-y-4 sm:space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {!isLogin && (
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-[#5D6939] mb-1.5 sm:mb-2">
@@ -136,7 +196,7 @@ export default function LoginPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, username: e.target.value })
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition cursor-text"
                   placeholder="Choose a username"
                   disabled={loading}
                 />
@@ -154,7 +214,7 @@ export default function LoginPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition cursor-text"
                 placeholder="your@email.com"
                 disabled={loading}
               />
@@ -173,14 +233,14 @@ export default function LoginPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-11 sm:pr-12 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-11 sm:pr-12 text-sm sm:text-base border-2 border-[#DBDAAE] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#5D6939] focus:ring-2 sm:focus:ring-4 focus:ring-[#AAB97E]/30 transition cursor-text"
                   placeholder="••••••••"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-[#5D6939]/70 hover:text-[#5D6939] hover:bg-[#FAF2E5]/50 rounded-lg transition-all"
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-[#5D6939]/70 hover:text-[#5D6939] hover:bg-[#FAF2E5]/50 rounded-lg transition-all cursor-pointer"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -280,10 +340,9 @@ export default function LoginPage() {
 
             {/* Submit Button */}
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
               disabled={loading}
-              className="w-full bg-[#5D6939] text-white py-3 sm:py-4 rounded-lg sm:rounded-xl font-black text-sm sm:text-lg hover:bg-[#4a552d] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-3 shadow-xl"
+              className="w-full bg-[#5D6939] text-white py-3 sm:py-4 rounded-lg sm:rounded-xl font-black text-sm sm:text-lg hover:bg-[#4a552d] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-3 shadow-xl cursor-pointer"
             >
               {loading && (
                 <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
@@ -294,7 +353,7 @@ export default function LoginPage() {
                 ? "Login"
                 : "Create Account"}
             </button>
-          </div>
+          </form>
 
           {/* Switch Link */}
           <p className="text-center text-xs sm:text-sm text-[#AAB97E] mt-4 sm:mt-6">
@@ -305,7 +364,7 @@ export default function LoginPage() {
                 setIsLogin(!isLogin);
                 setError("");
               }}
-              className="text-[#5D6939] font-bold hover:underline transition-all"
+              className="text-[#5D6939] font-bold hover:underline cursor-pointer transition-all"
             >
               {isLogin ? "Sign up" : "Login"}
             </button>
