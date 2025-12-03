@@ -27,6 +27,17 @@ export default function Sidebar() {
     { href: "/objectives", label: "Objectives", icon: BarChart3 },
   ];
 
+  // NEW: Direct download of static PDF from /public
+  const downloadTrackerPDF = () => {
+    // This works because file is in /public/lireon-daily-tracker.pdf
+    const link = document.createElement("a");
+    link.href = "/lireon-daily-tracker.pdf";
+    link.download = "Lireon_Daily_Habit_Tracker.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const SidebarContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
     <>
       {/* Compact Logo */}
@@ -68,30 +79,29 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Compact Weekly Quest */}
+      {/* Daily Habit Tracker - NOW DIRECT DOWNLOAD */}
       <div className="border-t border-[#DBDAAE] p-3 sm:p-4 lg:p-6">
         <div className="bg-[#FAF2E5] rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 border border-dashed border-[#AAB97E]">
           <p className="text-center font-bold text-[#5D6939] text-xs sm:text-sm uppercase tracking-wide">
-            Weekly Reading Quest
+            Daily Reading Quest
           </p>
           <p className="text-center text-[10px] sm:text-xs text-[#5D6939]/70 mt-1.5 sm:mt-2 mb-3 sm:mb-4 lg:mb-5 leading-snug">
-            Print it. Fill it. Become legendary.
+            Monday to Sunday tracking made easy!
           </p>
-          <a
-            href="https://github.com/kelvyndev/lireon-resources/raw/main/Lireon_Weekly_Reading_Quest.pdf"
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 lg:py-4 bg-[#5D6939] text-white rounded-xl lg:rounded-2xl text-sm font-bold shadow-md lg:shadow-lg hover:bg-[#4a552d] transition"
+
+          <button
+            onClick={downloadTrackerPDF}
+            className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 lg:py-4 bg-[#5D6939] text-white rounded-xl lg:rounded-2xl text-sm font-bold shadow-md lg:shadow-lg hover:bg-[#4a552d] transition active:scale-95"
           >
             <Download className="w-4 h-4 sm:w-4.5 h-4.5 lg:w-5 lg:h-5" />
             <span className="text-xs sm:text-sm lg:text-base">
               Download PDF
             </span>
-          </a>
+          </button>
+          {/* 
           <p className="text-center text-[10px] sm:text-xs italic text-[#5D6939]/70 mt-2 sm:mt-2.5 lg:mt-3">
             Libre i-print kahit ilang beses!
-          </p>
+          </p> */}
         </div>
       </div>
     </>
@@ -104,7 +114,7 @@ export default function Sidebar() {
         <SidebarContent onLinkClick={() => {}} />
       </aside>
 
-      {/* MOBILE: Tiny Cute Hamburger */}
+      {/* MOBILE: Hamburger */}
       <motion.button
         onClick={() => setIsOpen(true)}
         className="fixed top-3 left-3 z-[100] flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 shadow-md border border-[#DBDAAE]/50 backdrop-blur-sm hover:shadow-lg lg:hidden"
@@ -116,7 +126,7 @@ export default function Sidebar() {
         <Menu className="w-4.5 h-4.5 text-[#5D6939]" />
       </motion.button>
 
-      {/* MOBILE SIDEBAR - Much Narrower */}
+      {/* MOBILE SIDEBAR */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -135,13 +145,9 @@ export default function Sidebar() {
               transition={{ type: "spring", stiffness: 400, damping: 35 }}
               className="fixed inset-y-0 left-0 z-50 w-60 sm:w-64 bg-white border-r border-[#DBDAAE] shadow-xl lg:hidden overflow-y-auto"
             >
-              {/* Tiny Close Button */}
               <motion.button
                 onClick={() => setIsOpen(false)}
-                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 shadow-sm border border-[#DBDAAE]/40 hover:bg-white/100 transition-all"
-                initial={{ opacity: 0, rotate: -90 }}
-                animate={{ opacity: 1, rotate: 0 }}
-                transition={{ delay: 0.1 }}
+                className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 shadow-sm border border-[#DBDAAE]/40 hover:bg-white/100"
               >
                 <X className="w-4 h-4 text-[#5D6939]" />
               </motion.button>

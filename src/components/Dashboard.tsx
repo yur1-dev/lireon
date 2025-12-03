@@ -30,22 +30,34 @@ export default function Dashboard({
 
   const [appData, setAppData] = useState<AppData | null>(propAppData ?? null);
   const [showWelcome, setShowWelcome] = useState(true);
-  const [showTutorial, setShowTutorial] = useState<"pending" | boolean>(
-    "pending"
-  );
+  const [showTutorial, setShowTutorial] = useState<boolean>(false);
+  const [tutorialInitialized, setTutorialInitialized] = useState(false);
 
+  // Sync prop changes to local state
   useEffect(() => {
-    setAppData(propAppData ?? null);
+    if (propAppData) {
+      setAppData(propAppData);
+    }
   }, [propAppData]);
 
+  // Initialize tutorial state separately
   useEffect(() => {
-    if (localStorage.getItem("LIREON_TUTORIAL_SEEN") === "true") {
+    if (tutorialInitialized) return;
+
+    const hasSeenTutorial =
+      localStorage.getItem("LIREON_TUTORIAL_SEEN") === "true";
+
+    if (hasSeenTutorial) {
       setShowTutorial(false);
+      setTutorialInitialized(true);
       return;
     }
-    if (propAppData === null || propAppData === undefined) return;
-    setShowTutorial(!propAppData.hasSeenTutorial);
-  }, [propAppData]);
+
+    if (propAppData !== null && propAppData !== undefined) {
+      setShowTutorial(!propAppData.hasSeenTutorial);
+      setTutorialInitialized(true);
+    }
+  }, [propAppData, tutorialInitialized]);
 
   useEffect(() => {
     const dismissedDate = localStorage.getItem("LIREON_WELCOME_DISMISSED");
@@ -93,14 +105,17 @@ export default function Dashboard({
 
       setAppData((prev) => {
         if (!prev) return prev;
-        const updated = { ...prev, sessions };
-        propSetAppData?.(updated);
-        return updated;
+        return { ...prev, sessions };
       });
+
+      // Update parent asynchronously
+      if (propSetAppData && appData) {
+        propSetAppData({ ...appData, sessions });
+      }
     } catch (error) {
       console.error("Failed to refresh sessions:", error);
     }
-  }, [propSetAppData]);
+  }, [propSetAppData, appData]);
 
   // Refresh books
   const refreshBooks = useCallback(async () => {
@@ -113,14 +128,17 @@ export default function Dashboard({
 
       setAppData((prev) => {
         if (!prev) return prev;
-        const updated = { ...prev, books: safeBooks };
-        propSetAppData?.(updated);
-        return updated;
+        return { ...prev, books: safeBooks };
       });
+
+      // Update parent asynchronously
+      if (propSetAppData && appData) {
+        propSetAppData({ ...appData, books: safeBooks });
+      }
     } catch (error) {
       console.error("Failed to refresh books:", error);
     }
-  }, [propSetAppData]);
+  }, [propSetAppData, appData]);
 
   useEffect(() => {
     const handleSessionCompleted = () => {
@@ -297,34 +315,51 @@ export default function Dashboard({
           />
           <BooksSection
             books={books}
-            setBooks={(newBooks: Book[]) => {
-              setAppData((prev) => {
-                if (!prev) return prev;
-                const updated = { ...prev, books: newBooks };
-                propSetAppData?.(updated);
-                return updated;
-              });
-            }}
-            updateBook={(updatedBook: Partial<Book> & { id: string }) => {
-              setAppData((prev) => {
-                if (!prev) return prev;
-                const updatedBooks = (prev.books || []).map((b: Book) =>
-                  b.id === updatedBook.id ? { ...b, ...updatedBook } : b
-                );
-                const updated = { ...prev, books: updatedBooks };
-                propSetAppData?.(updated);
-                return updated;
-              });
-            }}
+            setBooks={useCallback(
+              (newBooks: Book[]) => {
+                setAppData((prev) => {
+                  if (!prev) return prev;
+                  return { ...prev, books: newBooks };
+                });
+                // Update parent in next tick to avoid render conflicts
+                setTimeout(() => {
+                  if (propSetAppData && appData) {
+                    propSetAppData({ ...appData, books: newBooks });
+                  }
+                }, 0);
+              },
+              [propSetAppData, appData]
+            )}
+            updateBook={useCallback(
+              (updatedBook: Partial<Book> & { id: string }) => {
+                setAppData((prev) => {
+                  if (!prev) return prev;
+                  const updatedBooks = (prev.books || []).map((b: Book) =>
+                    b.id === updatedBook.id ? { ...b, ...updatedBook } : b
+                  );
+                  return { ...prev, books: updatedBooks };
+                });
+                // Update parent in next tick to avoid render conflicts
+                setTimeout(() => {
+                  if (propSetAppData && appData) {
+                    const updatedBooks = (appData.books || []).map((b: Book) =>
+                      b.id === updatedBook.id ? { ...b, ...updatedBook } : b
+                    );
+                    propSetAppData({ ...appData, books: updatedBooks });
+                  }
+                }, 0);
+              },
+              [propSetAppData, appData]
+            )}
             onSessionsUpdate={refreshSessions}
             onRefresh={refreshBooks}
           />
         </div>
       </main>
 
-      {showTutorial !== "pending" && (
+      {tutorialInitialized && (
         <TutorialModal
-          open={showTutorial as boolean}
+          open={showTutorial}
           onOpenChange={(open) => !open && closeTutorialForever()}
         />
       )}

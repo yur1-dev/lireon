@@ -259,9 +259,14 @@ export default function FAQPage() {
           <p className="text-white/90 mb-6">
             Can't find what you're looking for? Reach out to our support team!
           </p>
-          <button className="bg-white text-[#5D6939] px-8 py-3 rounded-full font-bold hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg">
+          <a
+            href="https://www.facebook.com/profile.php?id=61584529562853"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-white text-[#5D6939] px-8 py-3 rounded-full font-bold hover:bg-[#FAF2E5] transition-all hover:scale-105 shadow-lg"
+          >
             Contact Support
-          </button>
+          </a>
         </motion.div>
       </div>
     </div>

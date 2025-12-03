@@ -42,67 +42,71 @@ const team = [
   {
     name: "Nathania M. Manibug",
     role: "Team Leader",
-    bio: "Leading the team in developing Lireon, coordinating project goals and deliverables.",
+    bio: "Legal Management student leading the Lireon project with vision and passion, ensuring every detail aligns with our mission to inspire lifelong reading.",
     image: "/Nathania-Manibug.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/nathania.manibug.9",
+      instagram: "https://www.instagram.com/cziroh?igsh=MXB6ZWdqb3gyN3pyOQ==",
     },
   },
   {
     name: "Jianne Alexa L. Pinapin",
     role: "Graphic Designer",
-    bio: "Legal Management student specializing in visual design and graphics for the application.",
+    bio: "Legal Management student bringing creativity and aesthetic excellence to Lireon through stunning visuals and thoughtful design.",
     image: "/Jianne-Pinapin.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/share/17jLY24yn1/?mibextid=wwXIfr",
+      instagram:
+        "https://www.instagram.com/vvryianne?igsh=OWNqa2RnZTl3Mm51&utm_source=qr",
     },
   },
   {
     name: "Angel U. Nicolas",
     role: "Team Member",
-    bio: "Legal Management student contributing to the development of Lireon as a capstone project.",
+    bio: "Legal Management student contributing to the development of Lireon as a capstone project, dedicated to building tools that inspire real change.",
     image: "/Angel-Nicholas.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/angel.nicolas.858999",
+      instagram:
+        "https://www.instagram.com/angel_nicolas1234?igsh=eHd5YTk3bXBkN3Vw",
     },
   },
   {
     name: "Geraldine D. Obenar",
     role: "Team Member",
-    bio: "Legal Management student focused on creating intuitive and beautiful user interfaces for the project.",
+    bio: "Legal Management student crafting intuitive and elegant user experiences for Lireon, making reading tracking feel seamless and joyful.",
     image: "/Geraldine-Obenar.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/share/1Hazh7oWbM/",
+      instagram:
+        "https://www.instagram.com/its_dine05?igsh=MWNsNTB1amRkazdubg==&utm_source=ig_contact_invite",
     },
   },
   {
     name: "John Paul A. Mauricio",
     role: "Team Member",
-    bio: "Legal Management student handling database design and server-side logic for the application.",
+    bio: "Legal Management student powering Lireon’s backend with smart database design and reliable server logic to keep everything running smoothly.",
     image: "/John-Paul-Mauricio.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/johnpaul.mauricio.98",
+      instagram: "https://www.instagram.com/_daboijp?igsh=MXhzYzBkOWluZTB4cQ==",
     },
   },
   {
     name: "Nerissa D. Marcaida",
     role: "Team Member",
-    bio: "Legal Management student ensuring the app works smoothly and bug-free for all users.",
+    bio: "Legal Management student ensuring every feature in Lireon is polished, bug-free, and ready to support readers on their journey.",
     image: "/Nerissa-Mercaida.png",
     links: {
-      facebook: "https://facebook.com",
-      instagram: "https://instagram.com",
+      facebook: "https://www.facebook.com/share/1Aq4jvPWSu/?mibextid=wwXIfr",
+      instagram:
+        "https://www.instagram.com/nrssmrcd_?igsh=MWs4M2dsNjE1dWQwbQ%3D%3D&utm_source=qr",
     },
   },
   {
     name: "Orland Karele I. Parallag",
     role: "Team Member",
-    bio: "Legal Management student managing data structures and ensuring efficient data storage and retrieval.",
+    bio: "Legal Management student optimizing data flow and storage behind the scenes, making sure Lireon performs fast and flawlessly.",
     image: "/Orland-Parallag.png",
     links: {
       facebook: "https://facebook.com",
@@ -257,7 +261,8 @@ export default function AboutPage() {
             </h2>
           </div>
           <p className="text-lg text-gray-600">
-            The passionate people behind Lireon
+            Proud Legal Management students building Lireon as our capstone
+            project with love and purpose
           </p>
         </motion.div>
 
@@ -297,6 +302,8 @@ export default function AboutPage() {
               <div className="flex justify-center gap-2 pt-3 border-t-2 border-[#DBDAAE]">
                 <a
                   href={member.links.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="p-2 rounded-lg bg-[#5D6939]/5 hover:bg-[#5D6939]/10 transition-colors"
                   aria-label="Facebook"
                 >
@@ -304,6 +311,8 @@ export default function AboutPage() {
                 </a>
                 <a
                   href={member.links.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="p-2 rounded-lg bg-[#5D6939]/5 hover:bg-[#5D6939]/10 transition-colors"
                   aria-label="Instagram"
                 >

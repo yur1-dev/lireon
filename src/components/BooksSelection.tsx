@@ -12,6 +12,8 @@ import {
   BookMarked,
   CheckCircle,
   Library,
+  Edit2,
+  Check,
 } from "lucide-react";
 
 export interface BookType {
@@ -49,6 +51,16 @@ export default function BooksSection({
     author: "",
     totalPages: "",
   });
+
+  // Edit state
+  const [editingBookId, setEditingBookId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    author: "",
+    totalPages: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const [logPages, setLogPages] = useState<Record<string, number>>({});
   const [updatingStatus, setUpdatingStatus] = useState<Record<string, boolean>>(
     {}
@@ -64,6 +76,59 @@ export default function BooksSection({
     bookTitle: string;
   } | null>(null);
   const [hoverRating, setHoverRating] = useState<Record<string, number>>({});
+
+  // Start editing
+  const startEdit = (book: BookType) => {
+    setEditingBookId(book.id);
+    setEditForm({
+      title: book.title,
+      author: book.author,
+      totalPages: book.totalPages.toString(),
+    });
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setEditingBookId(null);
+    setEditForm({ title: "", author: "", totalPages: "" });
+  };
+
+  // Save edit
+  const saveEdit = async () => {
+    if (!editingBookId) return;
+
+    const title = editForm.title.trim();
+    const author = editForm.author.trim();
+    const totalPages = Number(editForm.totalPages);
+
+    if (!title || !author || totalPages <= 0) {
+      alert("Please fill all fields correctly");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/books/${editingBookId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author, totalPages }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update book");
+
+      const updatedBook: BookType = await res.json();
+
+      setBooks(books.map((b) => (b.id === editingBookId ? updatedBook : b)));
+      updateBook(updatedBook);
+
+      cancelEdit();
+      await onRefresh?.();
+    } catch (err) {
+      alert("Failed to update book");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   // ADD BOOK
   const handleAddBook = async () => {
@@ -163,9 +228,7 @@ export default function BooksSection({
         return newState;
       });
 
-      if (onSessionsUpdate) {
-        await onSessionsUpdate();
-      }
+      if (onSessionsUpdate) await onSessionsUpdate();
 
       updateBook({
         id: book.id,
@@ -280,7 +343,7 @@ export default function BooksSection({
       {/* Delete Modal */}
       {deleteConfirm?.show && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-stone-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-stone-200">
             <div className="flex items-start gap-4 mb-4">
               <div className="p-3 bg-red-100 rounded-xl">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -358,7 +421,7 @@ export default function BooksSection({
           <button
             key={key}
             onClick={() => setFilterStatus(key)}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm ${
               filterStatus === key
                 ? "bg-[#5D6939] text-white shadow-sm"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
@@ -379,19 +442,19 @@ export default function BooksSection({
 
       {/* Add Book Form */}
       {showAdd && (
-        <div className="bg-stone-50 rounded-xl p-6 mb-6 border border-stone-200 animate-in slide-in-from-top-2 duration-200">
+        <div className="bg-stone-50 rounded-xl p-6 mb-6 border border-stone-200">
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-semibold text-lg text-stone-800">
               Add New Book
             </h4>
             <button
               onClick={() => setShowAdd(false)}
-              className="p-1.5 hover:bg-stone-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-stone-200 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-stone-500" />
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <input
               placeholder="Book title"
               value={newBook.title}
@@ -425,7 +488,7 @@ export default function BooksSection({
               disabled={isAdding}
               className="w-full bg-[#5D6939] text-white py-3 rounded-xl font-semibold hover:bg-[#4a552d] disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
             >
-              {isAdding && <Loader2 className="animate-spin w-4 h-4" />}
+              {isAdding && <Loader2 className="animate-spin w-5 h-5" />}
               {isAdding ? "Adding..." : "Add to Library"}
             </button>
           </div>
@@ -435,7 +498,7 @@ export default function BooksSection({
       {/* Books Grid */}
       {filteredBooks.length === 0 ? (
         <div className="text-center py-16 bg-stone-50 rounded-xl border-2 border-dashed border-stone-200">
-          <Library className="w-12 h-12 mx-auto mb-3 text-stone-300" />
+          <Library className="w-12 h-12 mx-auto mb-4 text-stone-300" />
           <p className="text-stone-500 font-medium">
             {filterStatus === "all"
               ? "No books yet. Add your first book!"
@@ -443,82 +506,148 @@ export default function BooksSection({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBooks.map((book) => {
             const progress = Math.round(
               (book.currentPage / book.totalPages) * 100
             );
             const rating = book.rating || 0;
+            const isEditing = editingBookId === book.id;
 
             return (
               <div
                 key={book.id}
-                className="group bg-white rounded-xl p-5 shadow-sm border border-stone-200 hover:shadow-md hover:border-stone-300 transition-all duration-200"
+                className="group bg-white rounded-2xl p-5 shadow-sm border border-stone-200 hover:shadow-lg hover:border-stone-300 transition-all duration-300 relative overflow-hidden"
               >
-                {/* Header with title and delete */}
-                <div className="flex items-start justify-between gap-3 mb-1">
-                  <h4 className="font-semibold text-lg text-stone-800 leading-tight line-clamp-2 flex-1">
-                    {book.title}
-                  </h4>
-                  <button
-                    onClick={() =>
-                      setDeleteConfirm({
-                        show: true,
-                        bookId: book.id,
-                        bookTitle: book.title,
-                      })
-                    }
-                    disabled={!!deletingBook[book.id]}
-                    className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50 shrink-0 -mt-1 -mr-1"
-                  >
-                    {deletingBook[book.id] ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                {/* Title Row with Edit/Save Buttons */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    {isEditing ? (
+                      <input
+                        value={editForm.title}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, title: e.target.value })
+                        }
+                        className="w-full font-semibold text-lg text-stone-800 bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none"
+                        autoFocus
+                      />
                     ) : (
-                      <Trash2 className="w-4 h-4" />
+                      <h4 className="font-semibold text-lg text-stone-800 leading-tight line-clamp-2">
+                        {book.title}
+                      </h4>
                     )}
-                  </button>
+                  </div>
+
+                  {/* Edit / Save / Cancel Buttons - Responsive */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={saveEdit}
+                          disabled={savingEdit}
+                          className="p-2.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {savingEdit ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Check className="w-5 h-5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="p-2.5 bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200 transition-all active:scale-95"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(book)}
+                          className="p-2 text-stone-500 hover:text-[#5D6939] hover:bg-stone-100 rounded-lg transition-all active:scale-95 opacity-0 group-hover:opacity-100"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeleteConfirm({
+                              show: true,
+                              bookId: book.id,
+                              bookTitle: book.title,
+                            })
+                          }
+                          disabled={!!deletingBook[book.id]}
+                          className="p-2 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95 opacity-0 group-hover:opacity-100"
+                        >
+                          {deletingBook[book.id] ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-5 h-5" />
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Author */}
-                <p className="text-sm text-stone-500 mb-3">by {book.author}</p>
+                {isEditing ? (
+                  <input
+                    value={editForm.author}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, author: e.target.value })
+                    }
+                    className="text-sm text-stone-600 mb-3 w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none"
+                    placeholder="Author"
+                  />
+                ) : (
+                  <p className="text-sm text-stone-500 mb-3">
+                    by {book.author}
+                  </p>
+                )}
 
-                {rating > 0 && (
+                {/* Rating */}
+                {rating > 0 && !isEditing && (
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= rating
-                              ? "text-amber-400 fill-amber-400"
-                              : "text-stone-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                    <StarRating bookId={book.id} currentRating={rating} />
                     <span className="text-xs text-stone-500">{rating}/5</span>
                   </div>
                 )}
 
-                {/* Progress section */}
+                {/* Progress */}
                 <div className="mb-4">
                   <div className="flex justify-between items-center text-sm mb-2">
-                    <span className="text-stone-500">
-                      {book.currentPage} of {book.totalPages} pages
+                    <span className="text-stone-600">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={editForm.totalPages}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              totalPages: e.target.value,
+                            })
+                          }
+                          className="w-20 px-2 py-1 text-sm border border-stone-300 rounded bg-white focus:border-[#5D6939] outline-none"
+                        />
+                      ) : (
+                        `${book.currentPage} / ${book.totalPages} pages`
+                      )}
                     </span>
-                    <span className="font-semibold text-[#5D6939]">
+                    <span className="font-bold text-[#5D6939]">
                       {progress}%
                     </span>
                   </div>
-                  <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-stone-200 rounded-full h-2.5 overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-[#AAB97E] to-[#5D6939] rounded-full transition-all duration-500 ease-out"
+                      className="h-full bg-gradient-to-r from-[#AAB97E] to-[#5D6939] rounded-full transition-all duration-500"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="relative mb-3">
+                {/* Status Select */}
+                <div className="relative mb-4">
                   <select
                     value={book.status}
                     onChange={(e) =>
@@ -527,27 +656,12 @@ export default function BooksSection({
                         e.target.value as BookType["status"]
                       )
                     }
-                    disabled={updatingStatus[book.id]}
-                    className="w-full px-4 py-2.5 pr-10 border-2 border-[#DBDAAE] rounded-xl bg-[#FAF2E5] text-sm font-semibold text-[#5D6939] appearance-none cursor-pointer hover:border-[#AAB97E] hover:bg-[#f5ebda] focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={updatingStatus[book.id] || isEditing}
+                    className="w-full px-4 py-3 pr-10 border-2 border-[#DBDAAE] rounded-xl bg-[#FAF2E5] text-sm font-bold text-[#5D6939] appearance-none cursor-pointer hover:border-[#AAB97E] focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none transition-all disabled:opacity-50"
                   >
-                    <option
-                      value="to-read"
-                      className="bg-white text-[#5D6939] cursor-pointer"
-                    >
-                      Want to Read
-                    </option>
-                    <option
-                      value="reading"
-                      className="bg-white text-[#5D6939] cursor-pointer"
-                    >
-                      Currently Reading
-                    </option>
-                    <option
-                      value="completed"
-                      className="bg-white text-[#5D6939] cursor-pointer"
-                    >
-                      Finished
-                    </option>
+                    <option value="to-read">Want to Read</option>
+                    <option value="reading">Currently Reading</option>
+                    <option value="completed">Finished</option>
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#5D6939]">
                     <svg
@@ -566,13 +680,13 @@ export default function BooksSection({
                   </div>
                 </div>
 
-                {/* Log pages - for reading books */}
-                {book.status === "reading" && (
+                {/* Log Pages */}
+                {book.status === "reading" && !isEditing && (
                   <div className="flex gap-2">
                     <input
                       type="number"
-                      placeholder="Pages read"
-                      className="flex-1 px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none transition-all"
+                      placeholder="Pages read today"
+                      className="flex-1 px-3 py-2.5 border border-stone-200 rounded-lg text-sm focus:border-[#5D6939] focus:ring-2 focus:ring-[#5D6939]/20 outline-none"
                       value={logPages[book.id] ?? ""}
                       onChange={(e) =>
                         setLogPages({
@@ -585,10 +699,10 @@ export default function BooksSection({
                     <button
                       onClick={() => handleLogPages(book.id)}
                       disabled={loggingPages[book.id]}
-                      className="bg-[#5D6939] text-white px-4 py-2.5 rounded-lg font-medium hover:bg-[#4a552d] disabled:opacity-50 transition-all active:scale-[0.97] shrink-0"
+                      className="bg-[#5D6939] text-white px-5 py-2.5 rounded-lg font-medium hover:bg-[#4a552d] disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
                     >
                       {loggingPages[book.id] ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         "Log"
                       )}
@@ -596,10 +710,11 @@ export default function BooksSection({
                   </div>
                 )}
 
-                {book.status === "completed" && rating === 0 && (
-                  <div className="bg-amber-50/50 rounded-lg p-4 border border-amber-100">
-                    <p className="font-medium text-sm text-stone-600 mb-3 text-center">
-                      Rate this book
+                {/* Rating Prompt */}
+                {book.status === "completed" && rating === 0 && !isEditing && (
+                  <div className="mt-4 bg-amber-50 rounded-xl p-4 border border-amber-200">
+                    <p className="text-center font-medium text-sm text-amber-900 mb-3">
+                      How was this book?
                     </p>
                     <div className="flex justify-center">
                       <StarRating
